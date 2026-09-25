@@ -1,30 +1,28 @@
-// Move the OPF logo sign freely: drag it in the 3D view (while "Move" is on),
-// nudge it with the arrow keys, and set its size and forward/back position with
-// sliders in the Artwork panel. The pose is kept in this browser; the panel
-// shows the numbers so a placement can be made the default for everyone.
+// Move the OPF logo sign freely (admin mode): drag it in the 3D view (while
+// "Move" is on), nudge it with the arrow keys, and set its size and forward/back
+// position with sliders in the Artwork panel. Every change is published to the
+// shared state, so everyone sees the logo where the admin put it.
 import * as THREE from 'three';
 import { stage as S } from '../stage.config.js';
+import { saveState } from './shared.js';
 
-const KEY = 'opf27-logo-pose';
 const Z_RANGE = [-6, 10];     // forward/back slider, metres (+z = towards the audience)
 const X_LIMIT = 15;
 const SCALE_RANGE = [0.4, 2];
 
-const load = () => {
-  try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; }
-};
-const save = (pose) => {
-  try {
-    if (pose) localStorage.setItem(KEY, JSON.stringify(pose));
-    else localStorage.removeItem(KEY);
-  } catch { /* storage blocked: the pose just isn't remembered */ }
-};
 const f2 = (v) => v.toFixed(2);
 
-export function setupLogoMove({ canvas, camera, controls, sign, row, label }) {
-  // Hotspot label follows the sign
-  const labelOffset = label ? label.position.clone().sub(new THREE.Vector3(0, sign.defaults().y, sign.defaults().z)) : null;
+// Keep the logo's hotspot label next to the sign wherever it goes (all viewers).
+export function attachLogoLabel(sign, label) {
+  if (!label) return;
+  const d = sign.defaults();
+  const offset = label.position.clone().sub(new THREE.Vector3(d.x, d.y, d.z));
+  sign.listeners.push((p) => label.position.set(p.x, p.y, p.z).add(offset));
+  sign.apply();
+}
 
+// setState records the shared state returned after a publish.
+export function setupLogoMove({ canvas, camera, controls, sign, row, setState }) {
   const ui = document.createElement('div');
   ui.className = 'art-move';
   ui.innerHTML = `
@@ -37,14 +35,14 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, label }) {
     <label class="art-slider"><span>Forward / back</span>
       <input type="range" name="z" min="${Z_RANGE[0]}" max="${Z_RANGE[1]}" step="0.05" /><output></output></label>
     <p class="art-pos"></p>
-    <p class="art-pos-note">Saved in this browser. To make it the default for everyone, put these numbers in
-      <code>stage.config.js</code> → <code>logo.position</code>.</p>`;
+    <p class="art-pos-note">Changes are published to everyone.</p>`;
   row.append(ui);
   const moveBtn = ui.querySelector('.art-move-btn');
   const resetBtn = ui.querySelector('.art-move-reset');
   const scaleIn = ui.querySelector('[name=scale]');
   const zIn = ui.querySelector('[name=z]');
   const posOut = ui.querySelector('.art-pos');
+  const note = ui.querySelector('.art-pos-note');
 
   const hint = document.createElement('div');
   hint.className = 'move-hint';
@@ -66,24 +64,40 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, label }) {
     return p;
   }
 
+  // ─── Publishing (debounced, so sliders and key repeats send one save) ───
+  let timer = null, saving = false;
+  function publish(delay = 400) {
+    clearTimeout(timer);
+    note.textContent = 'Publishing…';
+    timer = setTimeout(async () => {
+      timer = null;
+      saving = true;
+      try {
+        setState(await saveState({ logoPose: sign.pose }));
+        note.textContent = 'Published to everyone.';
+      } catch (e) {
+        note.textContent = `Not published: ${e.message}`;
+      } finally {
+        saving = false;
+      }
+    }, delay);
+  }
+
   function setPose(pose, persist = true) {
     sign.pose = pose ? clamp({ ...current(), ...pose }) : null;
     sign.apply();
-    if (persist) save(sign.pose);
+    if (persist) publish();
   }
 
-  sign.onMove = (p) => {
-    if (label) label.position.set(p.x, p.y, p.z).add(labelOffset);
+  sign.listeners.push((p) => {
     scaleIn.value = p.scale;
     zIn.value = p.z;
     scaleIn.nextElementSibling.textContent = `${Math.round(p.scale * 100)}%`;
     zIn.nextElementSibling.textContent = `${f2(p.z)} m`;
     posOut.textContent = `x ${f2(p.x)} · y ${f2(p.y)} · z ${f2(p.z)} m · size ${Math.round(p.scale * 100)}%`;
     resetBtn.hidden = !sign.pose;
-  };
+  });
   sign.apply();
-  const saved = load();
-  if (saved) setPose(saved, false);
 
   scaleIn.addEventListener('input', () => setPose({ scale: +scaleIn.value }));
   zIn.addEventListener('input', () => setPose({ z: +zIn.value }));
@@ -149,7 +163,7 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, label }) {
     dragId = null;
     controls.enabled = true;
     canvas.style.cursor = moving ? 'grab' : '';
-    save(sign.pose);
+    publish(0);
   };
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
@@ -164,4 +178,7 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, label }) {
     const p = current();
     setPose({ x: p.x + d[0], y: p.y + d[1] });
   });
+
+  // Shared-state refreshes leave the logo alone while it's being moved or saved.
+  return { isBusy: () => dragId !== null || timer !== null || saving };
 }

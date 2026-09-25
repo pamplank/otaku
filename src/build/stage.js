@@ -281,7 +281,7 @@ export function buildStage() {
   const LG = S.logo;
   // The sign can be moved in the viewer (see logoMove.js): `pose` overrides the
   // default placement, which follows the artwork's height.
-  const logoSign = { group: null, height: LG.maxHeight, pose: null, onMove: null };
+  const logoSign = { group: null, height: LG.maxHeight, pose: null, listeners: [] };
   logoSign.defaults = () => ({
     x: 0, z: L.logoZ, scale: 1,
     y: Math.min(S.truss.top - LG.drop + logoSign.height / 2, S.ceiling.height - 0.15 - logoSign.height / 2),
@@ -291,7 +291,7 @@ export function buildStage() {
     const p = { ...logoSign.defaults(), ...logoSign.pose };
     logoSign.group.position.set(p.x, p.y, p.z);
     logoSign.group.scale.setScalar(p.scale);
-    logoSign.onMove?.(p);
+    for (const fn of logoSign.listeners) fn(p);
   };
   const logoSlot = makeCutoutSlot('logo', {
     width: LG.width, maxHeight: LG.maxHeight, thickness: LG.thickness, border: LG.border,

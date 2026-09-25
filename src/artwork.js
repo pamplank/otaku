@@ -1,8 +1,9 @@
-// Artwork panel: swap the LED / wing / logo placeholders for real designs
-// without touching the repo. Files can be picked, dropped on a row, or dropped
-// (or double-clicked) straight onto the slot in the 3D view.
+// Artwork panel (admin mode): publish designs for the LED / wings / logo so
+// everyone sees them. Files can be picked, dropped on a row, or dropped (or
+// double-clicked) straight onto the slot in the 3D view.
 import * as THREE from 'three';
 import { slots } from './slots.js';
+import { uploadFile, saveState } from './shared.js';
 
 const INFO = {
   led:       { title: 'LED wall',   accept: 'image/*,video/*', kind: 'Image or video' },
@@ -21,7 +22,9 @@ function ratio(a) {
   return a >= 1 ? `${m(a)}:1` : `1:${m(1 / a)}`;
 }
 
-export function buildArtworkPanel({ canvas, camera, onChange }) {
+// getState / setState: the app's copy of the shared state (to revert a failed
+// publish, and to record the new state after one succeeds).
+export function buildArtworkPanel({ canvas, camera, getState, setState }) {
   const panel = document.getElementById('artPanel');
   const list = panel.querySelector('.art-list');
   const toggleBtn = document.getElementById('artBtn');
@@ -41,11 +44,43 @@ export function buildArtworkPanel({ canvas, camera, onChange }) {
     if (!file.type.startsWith('image/') && !(info.accept.includes('video') && file.type.startsWith('video/'))) {
       return fail(row, `${info.kind} files only`);
     }
+    const slot = slots[key];
+    row.el.classList.add('is-busy');
+    slot.pending = true; // shared-state refreshes leave this slot alone meanwhile
+    try {
+      await slot.showFile(file); // preview straight away
+    } catch {
+      slot.pending = false;
+      row.el.classList.remove('is-busy');
+      return fail(row, 'Couldn’t read that file. Try PNG, JPG or MP4.');
+    }
+    row.status.textContent = 'Publishing…';
+    try {
+      const entry = await uploadFile(key, file);
+      const state = await saveState({ slots: { [key]: entry } });
+      setState(state);
+      slot.published(state.slots[key]?.url ?? null);
+    } catch (e) {
+      fail(row, `Not published: ${e.message}`);
+      slot.pending = false;
+      slot.published(undefined); // forget the local preview…
+      slot.setShared(getState()?.slots?.[key] ?? null); // …and show what everyone sees
+    } finally {
+      slot.pending = false;
+      row.el.classList.remove('is-busy');
+      render(key);
+    }
+  }
+
+  async function reset(key) {
+    const row = rows[key];
+    row.error.hidden = true;
     row.el.classList.add('is-busy');
     try {
-      await slots[key].setFile(file);
-    } catch {
-      fail(row, 'Couldn’t read that file. Try PNG, JPG or MP4.');
+      setState(await saveState({ slots: { [key]: null } }));
+      await slots[key].setShared(null);
+    } catch (e) {
+      fail(row, `Not reset: ${e.message}`);
     } finally {
       row.el.classList.remove('is-busy');
     }
@@ -82,7 +117,7 @@ export function buildArtworkPanel({ canvas, camera, onChange }) {
       if (input.files[0]) useFile(key, input.files[0]);
       input.value = '';
     });
-    el.querySelector('.art-reset').addEventListener('click', () => slot.reset());
+    el.querySelector('.art-reset').addEventListener('click', () => reset(key));
 
     el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('is-over'); });
     el.addEventListener('dragleave', () => el.classList.remove('is-over'));
@@ -101,18 +136,18 @@ export function buildArtworkPanel({ canvas, camera, onChange }) {
       upload: el.querySelector('.art-upload'),
       resetBtn: el.querySelector('.art-reset'),
     };
-    slot.onChange = () => { render(key); onChange?.(); };
+    slot.onChange = () => render(key);
     render(key);
   }
 
   function render(key) {
     const slot = slots[key];
     const row = rows[key];
-    const labels = { placeholder: 'Placeholder', asset: 'From assets folder', upload: 'Uploaded' };
+    const labels = { placeholder: 'Placeholder', asset: 'From assets folder', shared: 'Published' };
     row.status.textContent = slot.file ? `${labels[slot.source]} · ${slot.file.split('/').pop()}` : labels.placeholder;
     row.el.dataset.source = slot.source;
-    row.upload.firstChild.textContent = slot.source === 'upload' ? 'Replace' : 'Upload';
-    row.resetBtn.hidden = slot.source !== 'upload';
+    row.upload.firstChild.textContent = slot.source === 'shared' ? 'Replace' : 'Upload';
+    row.resetBtn.hidden = slot.source !== 'shared';
     row.thumb.replaceChildren();
     const src = slot.thumbSrc();
     if (src) {

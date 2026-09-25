@@ -22,7 +22,11 @@
           <h1 class="display">The Main Stage</h1>
           <p class="sub">Crystal Pavilion · 3D concept · all sizes TBC</p>
           <p class="badge" id="artBadge" hidden>Placeholder artwork</p>
-          <button id="artBtn" class="btn btn-art display" type="button" aria-expanded="false" aria-controls="artPanel">Edit artwork</button>
+          <div class="admin-bar" id="adminBar" hidden>
+            <span class="pill admin-pill">Admin mode</span>
+            <button class="admin-logout" id="adminLogout" type="button">Log out</button>
+          </div>
+          <button id="artBtn" class="btn btn-art display" type="button" aria-expanded="false" aria-controls="artPanel" hidden>Edit artwork</button>
         </header>
 
         <section id="artPanel" class="card art-panel" aria-label="Artwork" hidden>
@@ -32,7 +36,7 @@
           </header>
           <p class="art-note">Upload a design, drop a file on a row, or double-click a slot in the 3D view. Designs are shown whole, never cropped.</p>
           <ul class="art-list"></ul>
-          <p class="art-note art-foot">Uploads are saved in this browser only. To show them to everyone, put the files in <code>public/assets</code> and push.</p>
+          <p class="art-note art-foot">Changes are published to everyone who opens the site. Reset goes back to the file in <code>public/assets</code>, or the placeholder.</p>
         </section>
       </div>
 
@@ -41,6 +45,21 @@
           <span class="display">Export render</span><small>1920 × 1080 PNG</small>
         </button>
         <label class="check"><input type="checkbox" id="captionChk" checked /> Caption on render</label>
+        <button id="adminBtn" class="admin-link" type="button">Admin</button>
+      </div>
+
+      <div class="admin-dialog" id="adminDialog" hidden>
+        <form class="card admin-form" id="adminForm">
+          <h2 class="display">Admin mode</h2>
+          <p class="admin-text">Enter the admin passcode to change the artwork and the logo position for everyone.</p>
+          <label for="adminCode" class="admin-label">Passcode</label>
+          <input id="adminCode" type="password" autocomplete="current-password" required />
+          <p class="admin-err" id="adminErr" role="alert" hidden></p>
+          <div class="admin-btns">
+            <button class="btn admin-submit display" type="submit">Log in</button>
+            <button class="admin-cancel" id="adminCancel" type="button">Cancel</button>
+          </div>
+        </form>
       </div>
 
       <div class="toggles" role="group" aria-label="View options">

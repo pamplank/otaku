@@ -11,6 +11,7 @@ The viewer always shows artwork whole: it is never cropped, stretched or recolou
 If the proportions differ from the slot, the artwork is centred with a margin.
 Until a file is present, a labelled placeholder is shown in its place.
 
-To try a design without committing it, use "Edit artwork" in the viewer:
-uploads there are saved in that browser only. Files in this folder are what
-everyone sees.
+Files in this folder are the defaults. In admin mode (the "Admin" button,
+passcode = ADMIN_PASSCODE on Vercel) designs can also be published from the
+viewer itself: they are stored in Supabase and everyone sees them straight
+away. "Reset" in admin mode goes back to the file in this folder.
