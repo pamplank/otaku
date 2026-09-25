@@ -1,4 +1,4 @@
-// Day / night. At night the LED + lightbox glow and the truss fixtures throw coloured beams.
+// Day / night. At night the LED glows and the truss fixtures throw coloured beams.
 import * as THREE from 'three';
 import { stage as S, palette as P } from '../stage.config.js';
 import { canvasTexture } from './sticker.js';
@@ -35,7 +35,7 @@ const beamFrag = /* glsl */ `
     gl_FragColor = vec4(color * a, a);
   }`;
 
-export function buildLighting(scene, { fixtures, lightboxMat, glassMats, shellLines, glows = [] }) {
+export function buildLighting(scene, { fixtures, glassMats, shellLines, glows = [] }) {
   const bg = { day: gradient('#cfe8ee', '#f4f0e8'), night: gradient('#0d0b10', '#221d29') };
 
   const amb = new THREE.AmbientLight('#ffffff', 1.6);
@@ -111,7 +111,6 @@ export function buildLighting(scene, { fixtures, lightboxMat, glassMats, shellLi
       if (on) r.lensMat.color.multiplyScalar(1.8);
     }
     for (const gl of glows) gl.visible = on;
-    lightboxMat.color.set(on ? '#ffffff' : '#f7f7f7');
     glassMats[0].opacity = on ? 0.07 : 0.16;
     glassMats[1].opacity = on ? 0.14 : 0.3;
     glassMats[2].opacity = on ? 0.05 : 0.1;

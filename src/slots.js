@@ -4,7 +4,8 @@
 // labelled placeholder.
 import * as THREE from 'three';
 import { assets as A, palette as P } from '../stage.config.js';
-import { canvasTexture, FONT, FONT_BODY } from './sticker.js';
+import { canvasTexture, outline, OUTLINE, FONT, FONT_BODY } from './sticker.js';
+import { dieCut } from './cutout.js';
 import { loadArt, saveArt, clearArt } from './artStore.js';
 
 const base = import.meta.env.BASE_URL;
@@ -145,25 +146,117 @@ const placeholders = {
     fitText(ctx, 'PLACEHOLDER', w * 0.8, w * 0.1, FONT);
     ctx.fillText('PLACEHOLDER', w / 2, y + w * 0.1);
   },
+  // Transparent around a rounded badge, so the die-cut sign shows its cut line.
   logo: (ctx, w, h) => {
-    ctx.fillStyle = P.white;
-    ctx.fillRect(0, 0, w, h);
-    dashedBorder(ctx, w, h, h * 0.08, h * 0.035, P.dark);
+    const x = w * 0.06, y = h * 0.14, bw = w * 0.88, bh = h * 0.72, r = bh * 0.3;
+    const badge = () => { ctx.beginPath(); ctx.roundRect(x, y, bw, bh, r); };
+    ctx.fillStyle = P.pink;
+    ctx.save();
+    ctx.translate(w * 0.02, h * 0.03);
+    badge();
+    ctx.fill();
+    ctx.restore();
+    badge();
+    ctx.fillStyle = P.yellow;
+    ctx.fill();
+    ctx.lineWidth = h * 0.025;
+    ctx.strokeStyle = P.dark;
+    ctx.stroke();
     ctx.fillStyle = P.dark;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    fitText(ctx, 'OPF LOGO', w * 0.6, h * 0.46, FONT);
-    ctx.fillText('OPF LOGO', w / 2, h * 0.44);
-    fitText(ctx, 'PLACEHOLDER · official file from CyberE', w * 0.7, h * 0.14, FONT_BODY);
-    ctx.fillText('PLACEHOLDER · official file from CyberE', w / 2, h * 0.76);
+    fitText(ctx, 'OPF LOGO', bw * 0.8, bh * 0.42, FONT);
+    ctx.fillText('OPF LOGO', w / 2, y + bh * 0.42);
+    fitText(ctx, 'PLACEHOLDER · official file from CyberE', bw * 0.8, bh * 0.1, FONT_BODY);
+    ctx.fillText('PLACEHOLDER · official file from CyberE', w / 2, y + bh * 0.76);
   },
 };
 
-// ─── Slot ───────────────────────────────────────────────────────────────────
-// w × h plane facing +z. Content is contain-fitted inside (1 - 2·padding).
+// ─── Slot controller ────────────────────────────────────────────────────────
 // Artwork priority: upload saved in this browser > /public/assets file > placeholder.
-export const slots = {}; // key -> slot controller (see makeSlot)
+// `apply(res)` puts loaded artwork (or null = placeholder) on the model.
+export const slots = {}; // key -> slot controller
 
+function disposeRes(res) {
+  res.tex.dispose();
+  if (res.video) { res.video.pause(); res.video.removeAttribute('src'); res.video.load(); }
+  if (res.url) URL.revokeObjectURL(res.url);
+}
+
+function slotController(key, { apply, info, placeholderThumb }) {
+  let current = null; // loaded artwork ({ tex, video?, url? }) or null for the placeholder
+  let assetRes = null; // the /public/assets file, kept to fall back to on reset
+  let seq = 0; // ignores loads that finish after a newer one started
+
+  function show(res, source) {
+    if (current && current !== assetRes) disposeRes(current);
+    current = res;
+    apply(res);
+    if (res?.video) res.video.play().catch(() => {});
+    if (assetRes && res !== assetRes) assetRes.video?.pause();
+    slotStatus[key] = res ? res.file : 'placeholder';
+    slot.source = res ? source : 'placeholder';
+    slot.file = res ? res.file : null;
+    slot.onChange?.(slot);
+  }
+
+  const slot = {
+    key, ...info, meshes: [],
+    source: 'placeholder', file: null, onChange: null,
+    isVideo: () => !!current?.video,
+    // Image/video URL of what the slot shows, for the panel's thumbnail.
+    thumbSrc() {
+      if (!current) return placeholderThumb();
+      return current.thumb?.() ?? (current.video ? current.video.src : current.tex.image.src);
+    },
+    // Show a user-supplied file. Throws if the browser cannot decode it.
+    async setFile(file) {
+      const id = ++seq;
+      const res = await loadBlob(file, file.name);
+      if (id !== seq) return disposeRes(res);
+      assetWanted = false;
+      show(res, 'upload');
+      saveArt(key, file);
+    },
+    // Drop the upload: back to the /public/assets file, or the placeholder.
+    reset() {
+      ++seq;
+      assetWanted = true;
+      clearArt(key);
+      show(assetRes, 'asset');
+    },
+  };
+  slots[key] = slot;
+  slotStatus[key] = 'placeholder';
+
+  // A saved upload shows as soon as it loads; the /public/assets probe (which can
+  // be slow for video) finishes in the background and is shown only if nothing
+  // else was chosen meanwhile.
+  let assetWanted = true;
+  const assetReady = loadFirst(A[key]).then((asset) => {
+    assetRes = asset;
+    if (asset && assetWanted && slot.source === 'placeholder') show(asset, 'asset');
+  });
+  const ready = (async () => {
+    const id = seq;
+    const saved = await loadArt(key);
+    if (saved?.blob && id === seq) {
+      try {
+        const res = await loadBlob(saved.blob, saved.name);
+        if (id !== seq) return disposeRes(res);
+        assetWanted = false;
+        show(res, 'upload');
+        return;
+      } catch { clearArt(key); }
+    }
+    await assetReady;
+  })();
+
+  return { slot, ready };
+}
+
+// ─── Flat slot ──────────────────────────────────────────────────────────────
+// w × h plane facing +z. Content is contain-fitted inside (1 - 2·padding).
 export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = true }) {
   const group = new THREE.Group();
   const MatClass = emissive ? THREE.MeshBasicMaterial : THREE.MeshToonMaterial;
@@ -185,81 +278,96 @@ export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = t
   content.userData.slotKey = key;
   group.add(content);
 
-  let current = null; // loaded artwork ({ tex, video?, url? }) or null for the placeholder
-  let assetRes = null; // the /public/assets file, kept to fall back to on reset
-  let seq = 0; // ignores loads that finish after a newer one started
   let phThumb = null;
-
-  function show(res, source) {
-    if (current && current !== assetRes) dispose(current);
-    current = res;
-    if (!res) {
-      contentMat.map = phTex;
-      content.scale.set(aw, ah, 1);
-      slotStatus[key] = 'placeholder';
-    } else {
-      contentMat.map = res.tex;
-      const slotAspect = aw / ah;
-      if (res.aspect > slotAspect) content.scale.set(aw, aw / res.aspect, 1);
+  const { slot, ready } = slotController(key, {
+    info: { width: aw, height: ah, aspect: aw / ah },
+    placeholderThumb: () => (phThumb ??= phTex.image.toDataURL()),
+    apply(res) {
+      contentMat.map = res ? res.tex : phTex;
+      if (!res) content.scale.set(aw, ah, 1);
+      else if (res.aspect > aw / ah) content.scale.set(aw, aw / res.aspect, 1);
       else content.scale.set(ah * res.aspect, ah, 1);
-      if (res.video) res.video.play().catch(() => {});
-      slotStatus[key] = res.file;
-    }
-    if (assetRes && res !== assetRes) assetRes.video?.pause();
-    contentMat.needsUpdate = true;
-    slot.source = res ? source : 'placeholder';
-    slot.file = res ? res.file : null;
-    slot.onChange?.(slot);
-  }
-
-  function dispose(res) {
-    res.tex.dispose();
-    if (res.video) { res.video.pause(); res.video.removeAttribute('src'); res.video.load(); }
-    if (res.url) URL.revokeObjectURL(res.url);
-  }
-
-  const slot = {
-    key, width: aw, height: ah, aspect: aw / ah, meshes: [bgMesh, content],
-    source: 'placeholder', file: null, onChange: null,
-    isVideo: () => !!current?.video,
-    // Image/video URL of what the slot shows, for the panel's thumbnail.
-    thumbSrc() {
-      if (!current) return (phThumb ??= phTex.image.toDataURL());
-      return current.video ? current.video.src : current.tex.image.src;
+      contentMat.needsUpdate = true;
     },
-    // Show a user-supplied file. Throws if the browser cannot decode it.
-    async setFile(file) {
-      const id = ++seq;
-      const res = await loadBlob(file, file.name);
-      if (id !== seq) return dispose(res);
-      show(res, 'upload');
-      saveArt(key, file);
-    },
-    // Drop the upload: back to the /public/assets file, or the placeholder.
-    reset() {
-      ++seq;
-      clearArt(key);
-      show(assetRes, 'asset');
-    },
-  };
-  slots[key] = slot;
-  slotStatus[key] = 'placeholder';
-
-  const ready = (async () => {
-    const id = seq;
-    const [saved, asset] = await Promise.all([loadArt(key), loadFirst(A[key])]);
-    assetRes = asset;
-    if (id !== seq) return; // the user already picked something
-    if (saved?.blob) {
-      try {
-        show(await loadBlob(saved.blob, saved.name), 'upload');
-        return;
-      } catch { clearArt(key); }
-    }
-    if (asset) show(asset, 'asset');
-  })();
+  });
+  slot.meshes = [bgMesh, content];
 
   return { group, ready, bgMat: bgMesh.material, contentMat };
+}
+
+// ─── Die-cut sign ───────────────────────────────────────────────────────────
+// A board cut to the artwork's outline plus a border (see cutout.js), facing +z
+// and centred on the group. Fits inside width × maxHeight; the art is never cropped.
+export function makeCutoutSlot(key, { width, maxHeight, thickness, border, boardColor, edgeColor, placeholder, onBuild }) {
+  const group = new THREE.Group();
+  const phCanvas = document.createElement('canvas');
+  phCanvas.width = 1024;
+  phCanvas.height = 640;
+  placeholder(phCanvas.getContext('2d'), phCanvas.width, phCanvas.height);
+
+  const faceMat = new THREE.MeshBasicMaterial();
+  const edgeMat = new THREE.MeshToonMaterial({ color: edgeColor });
+  const backMat = new THREE.MeshToonMaterial({ color: boardColor });
+  let mesh = null;
+  let phCut = null;
+
+  function build(cut) {
+    if (mesh) {
+      group.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.children.forEach((c) => c.geometry.dispose());
+      faceMat.map?.dispose();
+    }
+    // Shapes are in 0..1 texture space: scale x/y to metres, extrude depth in metres.
+    const geo = new THREE.ExtrudeGeometry(cut.shapes, { depth: thickness, bevelEnabled: false });
+    splitCaps(geo);
+    let w = width, h = width / cut.aspect;
+    if (h > maxHeight) { h = maxHeight; w = h * cut.aspect; }
+    geo.translate(-0.5, -0.5, -thickness / 2);
+    const tex = new THREE.CanvasTexture(cut.canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    faceMat.map = tex;
+    faceMat.needsUpdate = true;
+    mesh = new THREE.Mesh(geo, [faceMat, edgeMat, backMat]);
+    mesh.scale.set(w, h, 1);
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.userData.slotKey = key;
+    outline(mesh, OUTLINE, 40);
+    group.add(mesh);
+    slot.meshes = [mesh];
+    Object.assign(slot, { width: w, height: h, aspect: w / h });
+    onBuild?.(group, w, h);
+  }
+
+  const opts = { border: border / width };
+  const { slot, ready } = slotController(key, {
+    info: { width, height: maxHeight, aspect: width / maxHeight, spec: `≈ ${width} m wide · die-cut to the logo outline · image` },
+    placeholderThumb: () => (phCut ??= dieCut(phCanvas, opts)).canvas.toDataURL(),
+    apply(res) {
+      if (!res) return build((phCut ??= dieCut(phCanvas, opts)));
+      const cut = dieCut(res.tex.image, opts);
+      res.thumb = () => (res.thumbUrl ??= cut.canvas.toDataURL());
+      build(cut);
+    },
+  });
+  build((phCut ??= dieCut(phCanvas, opts)));
+
+  return { group, ready };
+}
+
+// ExtrudeGeometry gives each shape a caps group (back cap first, then front)
+// and a sides group. Split the caps so the front shows the artwork and the back
+// is plain board: material 0 = front, 1 = sides, 2 = back.
+function splitCaps(geo) {
+  const groups = geo.groups.slice();
+  geo.clearGroups();
+  for (const g of groups) {
+    if (g.materialIndex === 1) { geo.addGroup(g.start, g.count, 1); continue; }
+    const half = g.count / 2;
+    geo.addGroup(g.start, half, 2);
+    geo.addGroup(g.start + half, half, 0);
+  }
 }
 
 export { placeholders };

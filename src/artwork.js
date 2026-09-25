@@ -8,7 +8,7 @@ const INFO = {
   led:       { title: 'LED wall',   accept: 'image/*,video/*', kind: 'Image or video' },
   wingLeft:  { title: 'Left wing',  accept: 'image/*',         kind: 'Image' },
   wingRight: { title: 'Right wing', accept: 'image/*',         kind: 'Image' },
-  logo:      { title: 'OPF logo',   accept: 'image/*',         kind: 'Image' },
+  logo:      { title: 'OPF logo sign', accept: 'image/*',      kind: 'Image' },
 };
 
 const m = (v) => +v.toFixed(2);
@@ -65,7 +65,7 @@ export function buildArtworkPanel({ canvas, camera, onChange }) {
       <div class="art-thumb"></div>
       <div class="art-body">
         <p class="art-title">${info.title}</p>
-        <p class="art-spec">${m(slot.width)} × ${m(slot.height)} m · ${ratio(slot.aspect)} · ${info.kind.toLowerCase()}</p>
+        <p class="art-spec">${slot.spec ?? `${m(slot.width)} × ${m(slot.height)} m · ${ratio(slot.aspect)} · ${info.kind.toLowerCase()}`}</p>
         <p class="art-status"></p>
         <p class="art-error" role="alert" hidden></p>
         <div class="art-btns">
@@ -125,11 +125,11 @@ export function buildArtworkPanel({ canvas, camera, onChange }) {
   // ─── Drop / double-click on the 3D slots ───
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const meshes = Object.values(slots).flatMap((s) => s.meshes);
   function slotAt(e) {
     const r = canvas.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
+    const meshes = Object.values(slots).flatMap((s) => s.meshes); // the logo sign rebuilds its mesh
     return ray.intersectObjects(meshes, false)[0]?.object.userData.slotKey ?? null;
   }
 

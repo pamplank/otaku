@@ -1,10 +1,10 @@
-// The Sticker Stage: deck, LED, sticker-card frame, lightbox, wings, stars, truss, PA.
+// The Sticker Stage: deck, LED, sticker-card frame, logo sign, wings, stars, truss, PA.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { stage as S, palette as P } from '../../stage.config.js';
 import { L } from '../layout.js';
 import { toon, flat, box, outline, stickerPanel, starSticker, canvasTexture, OUTLINE } from '../sticker.js';
-import { makeSlot, placeholders } from '../slots.js';
+import { makeSlot, makeCutoutSlot, placeholders } from '../slots.js';
 
 const TRUSS_COLOR = '#c9ced3';
 
@@ -182,22 +182,16 @@ export function buildStage() {
   led.add(grid);
   g.add(led);
 
-  // OPF logo lightbox (face is an image slot; logo shown exactly as supplied)
+  // OPF logo: die-cut sign mounted on the front of the front top truss
   const LG = S.logo;
-  const lb = new THREE.Group();
-  lb.position.set(0, LG.top - LG.height / 2, L.frameFront + LG.depth / 2 + 0.02);
-  const lbBody = box(LG.width, LG.height, LG.depth, toon(P.white));
-  lb.add(lbBody);
-  const lbShadow = box(LG.width, LG.height, 0.05, toon(P.dark), { edges: false });
-  lbShadow.position.set(0.1, -0.1, -LG.depth / 2 - 0.01);
-  lb.add(lbShadow);
-  const logoSlot = makeSlot('logo', {
-    w: LG.width - 0.06, h: LG.height - 0.06, bg: P.white, padding: LG.padding,
-    placeholder: placeholders.logo,
+  const logoSlot = makeCutoutSlot('logo', {
+    width: LG.width, maxHeight: LG.maxHeight, thickness: LG.thickness, border: LG.border,
+    boardColor: P.white, edgeColor: '#e3e1de', placeholder: placeholders.logo,
+    // Height follows the artwork: keep the top clear of the ceiling.
+    onBuild: (sign, w, h) => { sign.position.y = Math.min(L.logoY, S.ceiling.height - 0.15 - h / 2); },
   });
-  logoSlot.group.position.z = LG.depth / 2 + 0.002;
-  lb.add(logoSlot.group);
-  g.add(lb);
+  logoSlot.group.position.z = L.logoZ;
+  g.add(logoSlot.group);
 
   // Wings (cyan left, yellow right) with KV/sponsor print slots
   const W = S.wings;
@@ -243,8 +237,8 @@ export function buildStage() {
   buildTruss(g);
   const fixtures = buildFixtures(g);
 
-  // Night glow rims: HDR-bright halos behind the LED and lightbox. Only these (not the
-  // artwork itself) exceed the bloom threshold, so KV and logo stay crisp and unaltered.
+  // Night glow rim: HDR-bright halo behind the LED. Only this (not the artwork
+  // itself) exceeds the bloom threshold, so the KV stays crisp and unaltered.
   const glows = [];
   const halo = (w, h, color, strength, x, y, z) => {
     const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(strength), toneMapped: false });
@@ -255,13 +249,11 @@ export function buildStage() {
     glows.push(m);
   };
   halo(LED.width + 0.22, LED.height + 0.22, '#ffd6ec', 2.2, 0, LED.bottom + LED.height / 2, L.ledZ - 0.055);
-  halo(LG.width + 0.12, LG.height + 0.12, '#ffffff', 1.7, 0, LG.top - LG.height / 2, L.frameFront + 0.015);
 
   return {
     group: g,
     fixtures,
     glows,
-    lightboxMat: logoSlot.bgMat,
     slots: [ledSlot, logoSlot],
   };
 }

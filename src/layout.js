@@ -56,6 +56,9 @@ export const L = {
   ledTop: S.led.bottom + S.led.height,
   trussLegX: T.spanOuter / 2 - T.size / 2,
   trussFrontZ: T.frontZ,
+  // Logo sign centre: on the front top truss, just in front of it
+  logoY: T.top - T.size / 2 + S.logo.raise,
+  logoZ: T.frontZ + T.size / 2 + S.logo.standoff + S.logo.thickness / 2,
   trussBackZ: T.frontZ - T.depth,
   ceilingClear: S.ceiling.height - T.top,
   hallFrontZ,

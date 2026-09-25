@@ -38,13 +38,16 @@ export const stage = {
     offset: 0.22,     // pink offset layer shift (right & down)
   },
 
-  // OPF logo lightbox, centred above the frame.
+  // OPF logo: die-cut sign on the front of the front top truss, centred.
+  // The board follows the logo's outline plus a white border (as at OPF on site).
+  // Height follows the artwork; the sign fits inside width × maxHeight.
   logo: {
-    top: 5.8,
-    width: 3.2,       // EST from elevation
-    height: 0.7,      // EST from elevation
-    depth: 0.3,       // EST
-    padding: 0.08,    // margin around the logo inside the lightbox (fraction)
+    width: 3.2,       // EST sign width, border included
+    maxHeight: 2.8,   // EST cap for tall artwork (the top is always kept 0.15 m under the ceiling)
+    raise: 0.1,       // sign centre above the truss centre line
+    standoff: 0.1,    // gap between the truss face and the back of the sign
+    thickness: 0.06,  // board thickness
+    border: 0.08,     // white board border around the artwork
   },
 
   // Wings: cyan left, yellow right, on the floor either side of the deck.
@@ -80,7 +83,7 @@ export const stage = {
   // Sparkle stickers (4-point stars). x/y = centre, z = distance in front of the frame face.
   stars: [
     { color: 'yellow', size: 0.95, x: -2.95, y: 5.2, z: 0.3 },  // frame top-left
-    { color: 'pink',   size: 0.42, x: 2.1,   y: 5.72, z: 0.35 }, // near the logo
+    { color: 'pink',   size: 0.42, x: 2.1,   y: 5.72, z: 0.35 }, // above the frame, right
     { color: 'cyan',   size: 0.62, x: 2.55,  y: 1.5, z: 0.3 },   // LED bottom-right
   ],
 };
@@ -149,7 +152,7 @@ export const assets = {
   led:       ['assets/led.mp4', 'assets/led.webm', 'assets/led.png', 'assets/led.jpg'],
   wingLeft:  ['assets/wing-left.png', 'assets/wing-left.jpg'],
   wingRight: ['assets/wing-right.png', 'assets/wing-right.jpg'],
-  logo:      ['assets/opf-logo.png', 'assets/opf-logo.webp', 'assets/opf-logo.svg'],
+  logo:      ['assets/opf-logo.png', 'assets/opf-logo.webp', 'assets/opf-logo.svg', 'assets/opf-logo.jpg'],
 };
 
 export const render = { width: 1920, height: 1080 };

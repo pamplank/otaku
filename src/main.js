@@ -41,7 +41,7 @@ async function init() {
   scene.add(stage.group, hall.group, people, labels.group);
 
   const lighting = buildLighting(scene, {
-    fixtures: stage.fixtures, lightboxMat: stage.lightboxMat, glows: stage.glows,
+    fixtures: stage.fixtures, glows: stage.glows,
     glassMats: hall.glassMats, shellLines: hall.shellLines,
   });
 
