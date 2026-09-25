@@ -79,7 +79,9 @@ export const clearAdminCookie = () => `${ADMIN_COOKIE}=; Path=/; HttpOnly; SameS
 // browser sends the file, and publicUrl(path).
 
 function supabaseStore() {
-  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Accept the project URL with or without a copied API path (…/rest/v1/).
+  const url = (process.env.SUPABASE_URL || '').trim().replace(/\/(rest|storage|auth)\/v1\/?.*$/, '').replace(/\/+$/, '');
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!url || !key) return null;
   const sb = createClient(url, key, { auth: { persistSession: false } });
   const bucket = () => sb.storage.from(BUCKET);
