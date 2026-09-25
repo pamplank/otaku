@@ -38,17 +38,27 @@ export const stage = {
     offset: 0.22,     // pink offset layer shift (right & down)
   },
 
-  // OPF logo: die-cut sign on the front of the front top truss, centred.
-  // The board follows the logo's outline plus a border, in the board colour.
+  // OPF logo: die-cut sign sitting on the front arch's header, centred (as on the
+  // OPF entrance arch on site). The board follows the logo's outline plus a border.
   // Height follows the artwork; the sign fits inside width × maxHeight.
   logo: {
-    width: 3.2,       // EST sign width, border included
-    maxHeight: 2.8,   // EST cap for tall artwork (the top is always kept 0.15 m under the ceiling)
-    raise: 0.1,       // sign centre above the truss centre line
-    standoff: 0.1,    // gap between the truss face and the back of the sign
+    width: 6.0,       // EST sign width, border included
+    maxHeight: 1.6,   // EST cap for tall artwork (the top is always kept 0.15 m under the ceiling)
+    drop: 0.55,       // how far the sign's bottom edge hangs below the top of the header
+    standoff: 0.06,   // gap between the header face and the back of the sign
     thickness: 0.06,  // board thickness
     border: 0.08,     // board border around the artwork
-    board: 'cyan',    // board colour (palette name), shows around and between the letters
+    board: 'white',   // board colour (palette name), shows around and between the letters
+  },
+
+  // Front arch: the front truss goalpost clad as a printed teal arch, styled after
+  // the OPF entrance arch on site. Set enabled: false to show the bare truss.
+  arch: {
+    enabled: true,
+    pillarWidth: 0.9,   // EST cladding around each front truss leg
+    pillarDepth: 0.6,   // EST
+    headerHeight: 1.0,  // EST header cladding, hanging from the truss top
+    headerDepth: 0.5,   // EST
   },
 
   // Wings: cyan left, yellow right, on the floor either side of the deck.

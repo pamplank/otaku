@@ -7,7 +7,7 @@ import { L } from './layout.js';
 const m = (v) => `${+v.toFixed(2)} m`;
 
 export function hotspotDefs() {
-  const D = S.deck, LED = S.led, T = S.truss, W = S.wings, LG = S.logo, C = S.ceiling;
+  const D = S.deck, LED = S.led, T = S.truss, W = S.wings, LG = S.logo, C = S.ceiling, A = S.arch;
   const F = X.foh, PK = X.pocket, BS = X.backstage;
   return [
     { id: 'deck', pos: [D.width / 2 - 0.5, D.height + 0.1, -0.4], title: 'Stage deck',
@@ -15,13 +15,17 @@ export function hotspotDefs() {
     { id: 'led', pos: [-LED.width / 2 + 0.4, L.ledTop - 0.3, L.ledZ + 0.05], title: 'LED wall',
       lines: [`${LED.width} × ${LED.height} m · ${LED.cols} × ${LED.rows} panels (${(LED.width / LED.cols) * 1000} mm)`,
         `Bottom ${m(LED.bottom)} · top ${m(L.ledTop)}`, 'KV loops · programme · live camera'] },
-    { id: 'logo', pos: [LG.width / 2 + 0.9, L.logoY - 0.4, L.logoZ], title: 'OPF logo sign',
-      lines: [`Die-cut ${LG.board} board on the front truss`, `≈ ${LG.width} m wide (est.)`, 'Official CyberE logo only, as supplied'] },
+    { id: 'logo', pos: [LG.width / 2 + 0.4, T.top + 0.3, L.logoZ], title: 'OPF logo sign',
+      lines: [`Die-cut ${LG.board} board on the ${A.enabled ? 'arch header' : 'front truss'}`, `≈ ${LG.width} m wide (est.)`,
+        'Official CyberE logo only, as supplied'] },
+    ...(A.enabled ? [{ id: 'arch', pos: [-L.archHalfWidth + 0.2, L.archHeaderBottom - 0.4, L.trussFrontZ + A.pillarDepth / 2], title: 'Front arch',
+      lines: [`Front truss clad as a printed arch · ≈ ${m(2 * L.archHalfWidth)} wide`,
+        `Pillars ${A.pillarWidth} × ${A.pillarDepth} m · header ${A.headerHeight} m deep`, 'Styled after the OPF entrance arch'] }] : []),
     { id: 'wings', pos: [-(D.width / 2 + W.width / 2), W.height, L.frameZ + 0.2], title: 'Wings',
       lines: [`${W.width} m wide each · floor to ${m(W.height)}`, 'Cyan left · yellow right', 'KV / sponsor print slots'] },
-    { id: 'truss', pos: [-L.trussLegX, T.top, L.trussFrontZ], title: 'Box truss',
+    { id: 'truss', pos: [-L.trussLegX, T.top, A.enabled ? L.trussBackZ : L.trussFrontZ], title: 'Box truss',
       lines: [`Top of truss ${m(T.top)}`, `Ground-supported goalpost · ≈ ${T.spanOuter} m wide (est.)`,
-        `${T.fixtures} fixtures on the front truss`, 'No ceiling rigging'] },
+        `${T.fixtures} fixtures on the front ${A.enabled ? 'arch' : 'truss'}`, 'No ceiling rigging'] },
     { id: 'ceiling', pos: [L.trussLegX + 0.9, (T.top + C.height) / 2, L.trussFrontZ], title: 'Ceiling clearance',
       lines: [`Ceiling ${m(C.height)} (25 ft)`, `≈ ${m(L.ceilingClear)} clear above the truss`] },
     { id: 'pit', pos: [-5, 0.3, X.pit.depth / 2], title: 'Pit + barricade',
