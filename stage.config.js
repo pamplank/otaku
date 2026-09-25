@@ -39,7 +39,7 @@ export const stage = {
   },
 
   // OPF logo: die-cut sign on the front of the front top truss, centred.
-  // The board follows the logo's outline plus a white border (as at OPF on site).
+  // The board follows the logo's outline plus a border, in the board colour.
   // Height follows the artwork; the sign fits inside width × maxHeight.
   logo: {
     width: 3.2,       // EST sign width, border included
@@ -47,7 +47,8 @@ export const stage = {
     raise: 0.1,       // sign centre above the truss centre line
     standoff: 0.1,    // gap between the truss face and the back of the sign
     thickness: 0.06,  // board thickness
-    border: 0.08,     // white board border around the artwork
+    border: 0.08,     // board border around the artwork
+    board: 'cyan',    // board colour (palette name), shows around and between the letters
   },
 
   // Wings: cyan left, yellow right, on the floor either side of the deck.

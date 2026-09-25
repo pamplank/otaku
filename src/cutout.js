@@ -11,10 +11,9 @@ const GRID = 256;          // outline tracing resolution (cells across)
 const MAX_TEX = 2048;      // face texture size cap
 const KEY_NEAR = 50;       // RGB distance from the background: fully cut away …
 const KEY_FAR = 110;       // … to fully kept (soft edge in between)
-const BOARD = '#ffffff';
 
 // source: HTMLImageElement or canvas. border: board margin as a fraction of the sign width.
-export function dieCut(source, { border = 0.03 } = {}) {
+export function dieCut(source, { border = 0.03, board = '#ffffff' } = {}) {
   const sw = source.naturalWidth || source.width;
   const sh = source.naturalHeight || source.height;
   const k = Math.min(1, MAX_TEX / ((1 + 2 * border) * Math.max(sw, sh)));
@@ -65,13 +64,13 @@ export function dieCut(source, { border = 0.03 } = {}) {
   const ox = Math.floor(x0 * sx), oy = Math.floor(y0 * sy);
   const tw = Math.ceil(x1 * sx) - ox, th = Math.ceil(y1 * sy) - oy;
 
-  // Face texture: white board in the traced shape, artwork on top
+  // Face texture: board colour in the traced shape, artwork on top
   const canvas = document.createElement('canvas');
   canvas.width = tw;
   canvas.height = th;
   const ctx = canvas.getContext('2d');
   ctx.translate(-ox, -oy);
-  ctx.fillStyle = BOARD;
+  ctx.fillStyle = board;
   ctx.beginPath();
   for (const l of loops) {
     l.forEach(([x, y], i) => ctx[i ? 'lineTo' : 'moveTo'](x * sx, y * sy));

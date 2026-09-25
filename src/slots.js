@@ -340,7 +340,7 @@ export function makeCutoutSlot(key, { width, maxHeight, thickness, border, board
     onBuild?.(group, w, h);
   }
 
-  const opts = { border: border / width };
+  const opts = { border: border / width, board: boardColor };
   const { slot, ready } = slotController(key, {
     info: { width, height: maxHeight, aspect: width / maxHeight, spec: `≈ ${width} m wide · die-cut to the logo outline · image` },
     placeholderThumb: () => (phCut ??= dieCut(phCanvas, opts)).canvas.toDataURL(),

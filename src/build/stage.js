@@ -186,7 +186,7 @@ export function buildStage() {
   const LG = S.logo;
   const logoSlot = makeCutoutSlot('logo', {
     width: LG.width, maxHeight: LG.maxHeight, thickness: LG.thickness, border: LG.border,
-    boardColor: P.white, edgeColor: '#e3e1de', placeholder: placeholders.logo,
+    boardColor: P[LG.board], edgeColor: new THREE.Color(P[LG.board]).multiplyScalar(0.82), placeholder: placeholders.logo,
     // Height follows the artwork: keep the top clear of the ceiling.
     onBuild: (sign, w, h) => { sign.position.y = Math.min(L.logoY, S.ceiling.height - 0.15 - h / 2); },
   });
