@@ -1,0 +1,181 @@
+// Artwork slots (LED, wings, logo). Official CyberE files dropped in /public/assets
+// are shown whole ("contain"): never cropped, stretched, recoloured or redrawn.
+// Until then each slot shows a clearly labelled placeholder.
+import * as THREE from 'three';
+import { assets as A, palette as P } from '../stage.config.js';
+import { canvasTexture, FONT, FONT_BODY } from './sticker.js';
+
+const base = import.meta.env.BASE_URL;
+export const slotStatus = {}; // key -> 'placeholder' | file path
+
+const isVideo = (f) => /\.(mp4|webm|mov)$/i.test(f);
+
+function tryImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function tryVideo(src) {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement('video');
+    v.muted = true;
+    v.loop = true;
+    v.playsInline = true;
+    v.setAttribute('muted', '');
+    v.setAttribute('playsinline', '');
+    v.preload = 'auto';
+    v.addEventListener('loadeddata', () => resolve(v), { once: true });
+    v.addEventListener('error', reject, { once: true });
+    v.src = src;
+    v.load();
+  });
+}
+
+async function loadFirst(files) {
+  for (const f of files) {
+    const src = base + f;
+    try {
+      if (isVideo(f)) {
+        const v = await tryVideo(src);
+        v.play().catch(() => {});
+        const tex = new THREE.VideoTexture(v);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return { tex, aspect: v.videoWidth / v.videoHeight, file: f };
+      }
+      const img = await tryImage(src);
+      const tex = new THREE.Texture(img);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      tex.needsUpdate = true;
+      return { tex, aspect: img.naturalWidth / img.naturalHeight, file: f };
+    } catch {
+      /* not supplied yet: try the next name */
+    }
+  }
+  return null;
+}
+
+// ─── Placeholders ───────────────────────────────────────────────────────────
+function stripes(ctx, w, h, colors, band) {
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 5);
+  const R = Math.hypot(w, h);
+  for (let i = -R / band, k = 0; i < R / band; i++, k++) {
+    ctx.fillStyle = colors[k % colors.length];
+    ctx.fillRect(i * band, -R, band * 0.5, 2 * R);
+  }
+  ctx.restore();
+}
+
+function dashedBorder(ctx, w, h, inset, lw, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.setLineDash([lw * 3, lw * 2]);
+  ctx.strokeRect(inset, inset, w - 2 * inset, h - 2 * inset);
+  ctx.restore();
+}
+
+function fitText(ctx, text, maxW, px, font) {
+  ctx.font = `${px}px ${font}`;
+  const m = ctx.measureText(text).width;
+  if (m > maxW) ctx.font = `${(px * maxW) / m}px ${font}`;
+}
+
+const placeholders = {
+  led: (ctx, w, h) => {
+    ctx.fillStyle = '#1a181b';
+    ctx.fillRect(0, 0, w, h);
+    stripes(ctx, w, h, ['#FF66AD55', '#00CAD855', '#FFF33F44'], h / 5);
+    const bw = w * 0.62, bh = h * 0.36;
+    const bx = (w - bw) / 2, by = (h - bh) / 2 - h * 0.04;
+    ctx.fillStyle = P.pink;
+    ctx.fillRect(bx + h * 0.025, by + h * 0.025, bw, bh);
+    ctx.fillStyle = P.white;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.lineWidth = h * 0.012;
+    ctx.strokeStyle = P.dark;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = P.dark;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    fitText(ctx, 'KV PLACEHOLDER', bw * 0.88, h * 0.12, FONT);
+    ctx.fillText('KV PLACEHOLDER', w / 2, by + bh * 0.42);
+    fitText(ctx, 'LED WALL · 5 × 3 M · 10 × 6 PANELS', bw * 0.88, h * 0.045, FONT);
+    ctx.fillText('LED WALL · 5 × 3 M · 10 × 6 PANELS', w / 2, by + bh * 0.76);
+    ctx.fillStyle = P.white;
+    fitText(ctx, 'KV loops · Programme · Live camera — official CyberE content to be supplied', w * 0.8, h * 0.04, FONT_BODY);
+    ctx.fillText('KV loops · Programme · Live camera — official CyberE content to be supplied', w / 2, h * 0.86);
+  },
+  wing: (label) => (ctx, w, h) => {
+    ctx.fillStyle = label.bg;
+    ctx.fillRect(0, 0, w, h);
+    dashedBorder(ctx, w, h, w * 0.06, w * 0.02, P.dark);
+    ctx.fillStyle = P.dark;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lines = [['KV /', 0.2], ['SPONSOR', 0.2], ['PRINT', 0.2]];
+    let y = h * 0.4;
+    for (const [t, s] of lines) {
+      fitText(ctx, t, w * 0.8, w * s, FONT);
+      ctx.fillText(t, w / 2, y);
+      y += w * 0.24;
+    }
+    fitText(ctx, 'PLACEHOLDER', w * 0.8, w * 0.1, FONT);
+    ctx.fillText('PLACEHOLDER', w / 2, y + w * 0.1);
+  },
+  logo: (ctx, w, h) => {
+    ctx.fillStyle = P.white;
+    ctx.fillRect(0, 0, w, h);
+    dashedBorder(ctx, w, h, h * 0.08, h * 0.035, P.dark);
+    ctx.fillStyle = P.dark;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    fitText(ctx, 'OPF LOGO', w * 0.6, h * 0.46, FONT);
+    ctx.fillText('OPF LOGO', w / 2, h * 0.44);
+    fitText(ctx, 'PLACEHOLDER · official file from CyberE', w * 0.7, h * 0.14, FONT_BODY);
+    ctx.fillText('PLACEHOLDER · official file from CyberE', w / 2, h * 0.76);
+  },
+};
+
+// ─── Slot ───────────────────────────────────────────────────────────────────
+// w × h plane facing +z. Content is contain-fitted inside (1 - 2·padding).
+export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = true }) {
+  const group = new THREE.Group();
+  const MatClass = emissive ? THREE.MeshBasicMaterial : THREE.MeshToonMaterial;
+
+  const bgMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new MatClass({ color: bg }));
+  group.add(bgMesh);
+
+  const aw = w * (1 - 2 * padding);
+  const ah = h * (1 - 2 * padding);
+  const pxW = 1024;
+  const pxH = Math.round((pxW * ah) / aw);
+  const phTex = canvasTexture(pxW, Math.min(4096, pxH), placeholder);
+
+  const contentMat = new MatClass({ map: phTex, transparent: true });
+  const content = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), contentMat);
+  content.position.z = 0.004;
+  content.scale.set(aw, ah, 1);
+  group.add(content);
+  slotStatus[key] = 'placeholder';
+
+  const ready = loadFirst(A[key]).then((res) => {
+    if (!res) return;
+    contentMat.map = res.tex;
+    contentMat.needsUpdate = true;
+    const slotAspect = aw / ah;
+    if (res.aspect > slotAspect) content.scale.set(aw, aw / res.aspect, 1);
+    else content.scale.set(ah * res.aspect, ah, 1);
+    slotStatus[key] = res.file;
+  });
+
+  return { group, ready, bgMat: bgMesh.material, contentMat };
+}
+
+export { placeholders };

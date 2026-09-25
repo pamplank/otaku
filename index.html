@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>OPF 2027 · The Sticker Stage</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 1 Q18 14 31 16 Q18 18 16 31 Q14 18 1 16 Q14 14 16 1Z' fill='%23FFF33F' stroke='%23242224' stroke-width='2'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene" aria-label="3D model of the Sticker Stage in the Crystal Pavilion"></canvas>
+      <div id="labels"></div>
+
+      <header class="card title-card">
+        <p class="eyebrow">Otaku Pop Fes 2027 · Okada Manila</p>
+        <h1>The Sticker Stage</h1>
+        <p class="sub">Crystal Pavilion · 3D concept · all sizes TBC</p>
+        <p class="badge" id="artBadge" hidden>Placeholder artwork</p>
+      </header>
+
+      <div class="actions">
+        <button id="exportBtn" class="btn btn-export" type="button">
+          <span>Export render</span><small>1920 × 1080 PNG</small>
+        </button>
+        <label class="check"><input type="checkbox" id="captionChk" checked /> Caption on render</label>
+      </div>
+
+      <div class="toggles" role="group" aria-label="View options">
+        <button class="chip chip-night" data-toggle="night" aria-pressed="false" type="button">
+          <span class="ico" aria-hidden="true"></span><span class="lbl">Day</span>
+        </button>
+        <button class="chip" data-toggle="labels" aria-pressed="true" type="button">Labels</button>
+        <button class="chip" data-toggle="people" aria-pressed="true" type="button">People</button>
+        <button class="chip" data-toggle="ceiling" aria-pressed="true" type="button">Ceiling 7.6 m</button>
+        <button class="chip" data-toggle="roof" aria-pressed="true" type="button">Hall roof</button>
+      </div>
+
+      <nav class="presets" aria-label="Camera presets">
+        <button data-preset="foh" aria-pressed="true" type="button"><kbd>1</kbd>Front of house</button>
+        <button data-preset="crowd" aria-pressed="false" type="button"><kbd>2</kbd>Crowd eye level</button>
+        <button data-preset="side" aria-pressed="false" type="button"><kbd>3</kbd>Side</button>
+        <button data-preset="plan" aria-pressed="false" type="button"><kbd>4</kbd>Top-down plan</button>
+        <button data-preset="wide" aria-pressed="false" type="button"><kbd>5</kbd>Wide hall</button>
+      </nav>
+
+      <p class="hint">Drag to orbit · right-drag to pan · scroll to zoom · N day/night</p>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
