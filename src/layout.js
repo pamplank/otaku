@@ -56,6 +56,12 @@ export const L = {
   ledTop: S.led.bottom + S.led.height,
   trussLegX: T.spanOuter / 2 - T.size / 2,
   trussFrontZ: T.frontZ,
+  // Front arch cladding (outer half-width, header underside) and the logo sign on it.
+  // logoY is the sign centre at its tallest; the real height follows the artwork.
+  archHalfWidth: T.spanOuter / 2 - T.size / 2 + S.arch.pillarWidth / 2,
+  archHeaderBottom: T.top - S.arch.headerHeight,
+  logoY: T.top - S.logo.drop + S.logo.maxHeight / 2,
+  logoZ: T.frontZ + (S.arch.enabled ? S.arch.headerDepth : T.size) / 2 + S.logo.standoff + S.logo.thickness / 2,
   trussBackZ: T.frontZ - T.depth,
   ceilingClear: S.ceiling.height - T.top,
   hallFrontZ,

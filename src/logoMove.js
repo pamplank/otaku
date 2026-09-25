@@ -1,0 +1,167 @@
+// Move the OPF logo sign freely: drag it in the 3D view (while "Move" is on),
+// nudge it with the arrow keys, and set its size and forward/back position with
+// sliders in the Artwork panel. The pose is kept in this browser; the panel
+// shows the numbers so a placement can be made the default for everyone.
+import * as THREE from 'three';
+import { stage as S } from '../stage.config.js';
+
+const KEY = 'opf27-logo-pose';
+const Z_RANGE = [-6, 10];     // forward/back slider, metres (+z = towards the audience)
+const X_LIMIT = 15;
+const SCALE_RANGE = [0.4, 2];
+
+const load = () => {
+  try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; }
+};
+const save = (pose) => {
+  try {
+    if (pose) localStorage.setItem(KEY, JSON.stringify(pose));
+    else localStorage.removeItem(KEY);
+  } catch { /* storage blocked: the pose just isn't remembered */ }
+};
+const f2 = (v) => v.toFixed(2);
+
+export function setupLogoMove({ canvas, camera, controls, sign, row, label }) {
+  // Hotspot label follows the sign
+  const labelOffset = label ? label.position.clone().sub(new THREE.Vector3(0, sign.defaults().y, sign.defaults().z)) : null;
+
+  const ui = document.createElement('div');
+  ui.className = 'art-move';
+  ui.innerHTML = `
+    <div class="art-btns">
+      <button class="art-move-btn" type="button" aria-pressed="false">Move</button>
+      <button class="art-move-reset" type="button">Reset position</button>
+    </div>
+    <label class="art-slider"><span>Size</span>
+      <input type="range" name="scale" min="${SCALE_RANGE[0]}" max="${SCALE_RANGE[1]}" step="0.05" /><output></output></label>
+    <label class="art-slider"><span>Forward / back</span>
+      <input type="range" name="z" min="${Z_RANGE[0]}" max="${Z_RANGE[1]}" step="0.05" /><output></output></label>
+    <p class="art-pos"></p>
+    <p class="art-pos-note">Saved in this browser. To make it the default for everyone, put these numbers in
+      <code>stage.config.js</code> → <code>logo.position</code>.</p>`;
+  row.append(ui);
+  const moveBtn = ui.querySelector('.art-move-btn');
+  const resetBtn = ui.querySelector('.art-move-reset');
+  const scaleIn = ui.querySelector('[name=scale]');
+  const zIn = ui.querySelector('[name=z]');
+  const posOut = ui.querySelector('.art-pos');
+
+  const hint = document.createElement('div');
+  hint.className = 'move-hint';
+  hint.hidden = true;
+  hint.innerHTML = '<span>Drag the logo to move it · arrow keys nudge</span><button type="button">Done</button>';
+  document.getElementById('app').append(hint);
+  hint.querySelector('button').addEventListener('click', () => setMoving(false));
+
+  const current = () => ({ ...sign.defaults(), ...sign.pose });
+
+  // Keep the sign above the floor and under the ceiling, within the hall.
+  function clamp(p) {
+    const half = (sign.height * p.scale) / 2;
+    const yMax = S.ceiling.height - 0.15 - half;
+    p.x = THREE.MathUtils.clamp(p.x, -X_LIMIT, X_LIMIT);
+    p.y = THREE.MathUtils.clamp(p.y, half, Math.max(half, yMax));
+    p.z = THREE.MathUtils.clamp(p.z, Z_RANGE[0], Z_RANGE[1]);
+    p.scale = THREE.MathUtils.clamp(p.scale, SCALE_RANGE[0], SCALE_RANGE[1]);
+    return p;
+  }
+
+  function setPose(pose, persist = true) {
+    sign.pose = pose ? clamp({ ...current(), ...pose }) : null;
+    sign.apply();
+    if (persist) save(sign.pose);
+  }
+
+  sign.onMove = (p) => {
+    if (label) label.position.set(p.x, p.y, p.z).add(labelOffset);
+    scaleIn.value = p.scale;
+    zIn.value = p.z;
+    scaleIn.nextElementSibling.textContent = `${Math.round(p.scale * 100)}%`;
+    zIn.nextElementSibling.textContent = `${f2(p.z)} m`;
+    posOut.textContent = `x ${f2(p.x)} · y ${f2(p.y)} · z ${f2(p.z)} m · size ${Math.round(p.scale * 100)}%`;
+    resetBtn.hidden = !sign.pose;
+  };
+  sign.apply();
+  const saved = load();
+  if (saved) setPose(saved, false);
+
+  scaleIn.addEventListener('input', () => setPose({ scale: +scaleIn.value }));
+  zIn.addEventListener('input', () => setPose({ z: +zIn.value }));
+  resetBtn.addEventListener('click', () => setPose(null));
+
+  // ─── Move mode ───
+  let moving = false;
+  function setMoving(on) {
+    moving = on;
+    moveBtn.setAttribute('aria-pressed', String(on));
+    moveBtn.textContent = on ? 'Done moving' : 'Move';
+    hint.hidden = !on;
+    canvas.style.cursor = '';
+  }
+  moveBtn.addEventListener('click', () => setMoving(!moving));
+
+  const ray = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+  const hitPoint = new THREE.Vector3();
+  const grab = new THREE.Vector3();
+  function aim(e) {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+  }
+  const overSign = (e) => {
+    aim(e);
+    return ray.intersectObject(sign.group, true).length > 0;
+  };
+
+  let dragId = null;
+  // Capture phase on the app root runs before OrbitControls' own listener on the
+  // canvas, so a drag that starts on the sign never orbits the camera.
+  document.getElementById('app').addEventListener('pointerdown', (e) => {
+    if (!moving || e.target !== canvas || e.button !== 0 || !overSign(e)) return;
+    e.stopPropagation();
+    const p = current();
+    plane.constant = -p.z; // the sign's own vertical plane
+    if (!ray.ray.intersectPlane(plane, hitPoint)) return;
+    grab.set(p.x, p.y, p.z).sub(hitPoint);
+    dragId = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+    controls.enabled = false;
+    canvas.style.cursor = 'grabbing';
+  }, true);
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!moving) return;
+    if (dragId === null) {
+      canvas.style.cursor = overSign(e) ? 'grab' : '';
+      return;
+    }
+    if (e.pointerId !== dragId) return;
+    aim(e);
+    if (!ray.ray.intersectPlane(plane, hitPoint)) return;
+    hitPoint.add(grab);
+    setPose({ x: hitPoint.x, y: hitPoint.y }, false);
+  });
+
+  const endDrag = (e) => {
+    if (dragId === null || e.pointerId !== dragId) return;
+    dragId = null;
+    controls.enabled = true;
+    canvas.style.cursor = moving ? 'grab' : '';
+    save(sign.pose);
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  window.addEventListener('keydown', (e) => {
+    if (!moving || e.target.closest('input, textarea')) return;
+    const step = e.shiftKey ? 0.25 : 0.05;
+    const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
+    if (e.key === 'Escape') return setMoving(false);
+    if (!d) return;
+    e.preventDefault();
+    const p = current();
+    setPose({ x: p.x + d[0], y: p.y + d[1] });
+  });
+}

@@ -8,7 +8,9 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { palette as P } from '../stage.config.js';
 
 export const FONT = '"Archivo Black", "Arial Black", sans-serif';
-export const FONT_BODY = '"Inter", Arial, sans-serif';
+export const FONT_BODY = '"Montserrat", Arial, sans-serif';
+// Wide heavy display face (use with fontStretch = 'expanded'), as in the OPF deck
+export const FONT_DISPLAY = '"Archivo", "Archivo Black", "Arial Black", sans-serif';
 
 // ─── Lines ──────────────────────────────────────────────────────────────────
 // Widths are authored for a 1080 px-tall frame and rescaled to the viewport,
@@ -126,6 +128,23 @@ export function starSticker(size, color, { depth = 0.05, offset = 0.07 } = {}) {
   off.position.set(size * offset, -size * offset, -0.01);
   g.add(off);
   return g;
+}
+
+// 4-point sparkle drawn on a canvas (centre x, y; radius r).
+export function drawSparkle(ctx, x, y, r, fill, stroke = P.dark, lineWidth = r * 0.12) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + r);
+  ctx.quadraticCurveTo(x + r * 0.12, y + r * 0.12, x + r, y);
+  ctx.quadraticCurveTo(x + r * 0.12, y - r * 0.12, x, y - r);
+  ctx.quadraticCurveTo(x - r * 0.12, y - r * 0.12, x - r, y);
+  ctx.quadraticCurveTo(x - r * 0.12, y + r * 0.12, x, y + r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (stroke) {
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
+  }
 }
 
 // ─── Canvas textures ────────────────────────────────────────────────────────

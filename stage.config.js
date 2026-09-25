@@ -19,6 +19,8 @@ export const palette = {
   pink: '#FF66AD',
   cyan: '#00CAD8',
   white: '#FFFFFF',
+  teal: '#1FC3CC',      // printed arch / wraps (the OPF entrance arch teal)
+  tealLight: '#63DCE3', // checker patches on the teal prints
 };
 
 // ─── THE STAGE (front elevation) ────────────────────────────────────────────
@@ -38,13 +40,30 @@ export const stage = {
     offset: 0.22,     // pink offset layer shift (right & down)
   },
 
-  // OPF logo lightbox, centred above the frame.
+  // OPF logo: die-cut sign sitting on the front arch's header, centred (as on the
+  // OPF entrance arch on site). The board follows the logo's outline plus a border.
+  // Height follows the artwork; the sign fits inside width × maxHeight.
   logo: {
-    top: 5.8,
-    width: 3.2,       // EST from elevation
-    height: 0.7,      // EST from elevation
-    depth: 0.3,       // EST
-    padding: 0.08,    // margin around the logo inside the lightbox (fraction)
+    width: 6.0,       // EST sign width, border included
+    maxHeight: 1.6,   // EST cap for tall artwork (the top is always kept 0.15 m under the ceiling)
+    drop: 0.55,       // how far the sign's bottom edge hangs below the top of the header
+    standoff: 0.06,   // gap between the header face and the back of the sign
+    thickness: 0.06,  // board thickness
+    border: 0.08,     // board border around the artwork
+    board: 'white',   // board colour (palette name), shows around and between the letters
+    // Default placement for everyone, e.g. { x: 1.8, y: 5.5, z: 3, scale: 1.5 } (centre, metres).
+    // null = on the arch header. Copy the numbers shown under "Move" in the Artwork panel.
+    position: null,
+  },
+
+  // Front arch: the front truss goalpost clad as a printed teal arch, styled after
+  // the OPF entrance arch on site. Set enabled: false to show the bare truss.
+  arch: {
+    enabled: true,
+    pillarWidth: 0.9,   // EST cladding around each front truss leg
+    pillarDepth: 0.6,   // EST
+    headerHeight: 1.0,  // EST header cladding, hanging from the truss top
+    headerDepth: 0.5,   // EST
   },
 
   // Wings: cyan left, yellow right, on the floor either side of the deck.
@@ -80,9 +99,36 @@ export const stage = {
   // Sparkle stickers (4-point stars). x/y = centre, z = distance in front of the frame face.
   stars: [
     { color: 'yellow', size: 0.95, x: -2.95, y: 5.2, z: 0.3 },  // frame top-left
-    { color: 'pink',   size: 0.42, x: 2.1,   y: 5.72, z: 0.35 }, // near the logo
+    { color: 'pink',   size: 0.42, x: 2.1,   y: 5.72, z: 0.35 }, // above the frame, right
     { color: 'cyan',   size: 0.62, x: 2.55,  y: 1.5, z: 0.3 },   // LED bottom-right
   ],
+};
+
+// ─── STAGE DRESSING (printed wraps, sparkles, floor graphics, night neon) ────
+// Styled after the OPF 2027 deck. Set any part to enabled: false to remove it.
+export const dressing = {
+  // Printed banner along the front of the barricade
+  barricade: {
+    enabled: true,
+    tagline: 'JUNE 5 & 6 2027 · OKADA MANILA',
+    logoEvery: 4,        // metres between repeated logos
+  },
+  // Sticker-card wraps on the fronts of the PA stacks (bottom box, top box)
+  paWraps: { enabled: true, labels: ['2027', 'OPF'] },
+  // Die-cut sparkles hanging from the side trusses + a comic speech bubble
+  sparkles: {
+    enabled: true,
+    // [x, y, z, size, colour] (centre, metres)
+    stars: [
+      [-4.3, 4.3, -1.4, 1.0, 'yellow'], [-3.9, 4.75, -3.6, 0.7, 'pink'], [4.35, 4.45, -1.6, 0.85, 'teal'],
+      [3.95, 4.85, -3.8, 0.6, 'yellow'], [-3.2, 4.85, -2.4, 0.45, 'white'], [3.2, 4.75, -2.7, 0.5, 'pink'],
+    ],
+    bubble: { text: 'LET’S GO!!', x: 4.3, y: 3.9, z: 0.9, width: 1.9 },
+  },
+  // Floor graphics: pink/white checker pit, "01 · stage" badge + arrows in the pocket
+  floor: { enabled: true, badge: '01', title: 'THE STICKER STAGE', width: 12, depth: 4.5 },
+  // Night only: glowing strips on the arch and the deck's front edge
+  neon: { enabled: true },
 };
 
 // ─── PLACEMENT IN THE HALL (plan view) ──────────────────────────────────────
@@ -149,7 +195,7 @@ export const assets = {
   led:       ['assets/led.mp4', 'assets/led.webm', 'assets/led.png', 'assets/led.jpg'],
   wingLeft:  ['assets/wing-left.png', 'assets/wing-left.jpg'],
   wingRight: ['assets/wing-right.png', 'assets/wing-right.jpg'],
-  logo:      ['assets/opf-logo.png', 'assets/opf-logo.webp', 'assets/opf-logo.svg'],
+  logo:      ['assets/opf-logo.png', 'assets/opf-logo.webp', 'assets/opf-logo.svg', 'assets/opf-logo.jpg'],
 };
 
 export const render = { width: 1920, height: 1080 };

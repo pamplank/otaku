@@ -7,19 +7,23 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { render as R, palette as P } from '../stage.config.js';
-import { updateLineResolution, FONT } from './sticker.js';
+import { updateLineResolution, FONT, FONT_DISPLAY, FONT_BODY } from './sticker.js';
 import { slotStatus } from './slots.js';
 import { buildStage } from './build/stage.js';
 import { buildHall } from './build/hall.js';
+import { buildDressing } from './build/dressing.js';
 import { buildPeople } from './build/people.js';
 import { buildLighting } from './lighting.js';
 import { buildLabels } from './labels.js';
 import { createCameraRig } from './cameras.js';
+import { buildArtworkPanel } from './artwork.js';
+import { setupLogoMove } from './logoMove.js';
 
 async function init() {
   try {
     await Promise.race([
-      Promise.all([document.fonts.load(`64px ${FONT}`), document.fonts.load('600 32px Inter')]),
+      Promise.all([document.fonts.load(`64px ${FONT}`), document.fonts.load(`expanded 900 32px ${FONT_DISPLAY}`),
+        document.fonts.load(`600 32px ${FONT_BODY}`)]),
       new Promise((r) => setTimeout(r, 2500)),
     ]);
   } catch { /* fall back to system fonts */ }
@@ -37,10 +41,11 @@ async function init() {
   const hall = buildHall();
   const people = buildPeople();
   const labels = buildLabels();
-  scene.add(stage.group, hall.group, people, labels.group);
+  const dressing = buildDressing();
+  scene.add(stage.group, hall.group, dressing.group, people, labels.group);
 
   const lighting = buildLighting(scene, {
-    fixtures: stage.fixtures, lightboxMat: stage.lightboxMat, glows: stage.glows,
+    fixtures: stage.fixtures, glows: [...stage.glows, ...dressing.glows],
     glassMats: hall.glassMats, shellLines: hall.shellLines,
   });
 
@@ -82,7 +87,7 @@ async function init() {
     }
   };
   const decals = [];
-  hall.group.traverse((o) => { if (o.userData.decal) decals.push(o); });
+  for (const grp of [hall.group, dressing.group]) grp.traverse((o) => { if (o.userData.decal) decals.push(o); });
 
   const setToggle = (name, value) => {
     state[name] = value;
@@ -180,28 +185,35 @@ async function init() {
     return url;
   }
 
+  // Caption card in the deck's style: rounded white card, dark outline, hard dark shadow.
   function drawCaption(ctx, viewName) {
     const text = `OTAKU POP FES 2027 · THE STICKER STAGE · ${viewName.toUpperCase()}`;
     const sub = 'Concept only · all sizes TBC pending site survey' +
       (Object.values(slotStatus).includes('placeholder') ? ' · placeholder artwork' : '');
-    ctx.font = `26px ${FONT}`;
+    const head = () => { ctx.font = `900 24px ${FONT_DISPLAY}`; ctx.fontStretch = 'expanded'; };
+    const body = () => { ctx.font = `600 18px ${FONT_BODY}`; ctx.fontStretch = 'normal'; };
+    head();
     const tw = ctx.measureText(text).width;
-    ctx.font = '600 18px Inter, Arial, sans-serif';
+    body();
     const sw = ctx.measureText(sub).width;
-    const bw = Math.max(tw, sw) + 48, bh = 86, x = 40, y = R.height - bh - 40;
-    ctx.fillStyle = P.pink;
-    ctx.fillRect(x + 7, y + 7, bw, bh);
+    const bw = Math.max(tw, sw) + 52, bh = 88, x = 40, y = R.height - bh - 40, r = 18;
+    ctx.fillStyle = P.dark;
+    ctx.beginPath();
+    ctx.roundRect(x + 8, y + 8, bw, bh, r);
+    ctx.fill();
     ctx.fillStyle = P.white;
-    ctx.fillRect(x, y, bw, bh);
-    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(x, y, bw, bh, r);
+    ctx.fill();
+    ctx.lineWidth = 3;
     ctx.strokeStyle = P.dark;
-    ctx.strokeRect(x, y, bw, bh);
+    ctx.stroke();
     ctx.fillStyle = P.dark;
     ctx.textBaseline = 'alphabetic';
-    ctx.font = `26px ${FONT}`;
-    ctx.fillText(text, x + 24, y + 40);
-    ctx.font = '600 18px Inter, Arial, sans-serif';
-    ctx.fillText(sub, x + 24, y + 68);
+    head();
+    ctx.fillText(text, x + 26, y + 40);
+    body();
+    ctx.fillText(sub, x + 26, y + 68);
   }
 
   const viewLabel = () => rig.presets[rig.current]?.label || 'Custom view';
@@ -227,12 +239,13 @@ async function init() {
     labelRenderer.render(scene, camera);
   });
 
-  // Placeholder badge
-  Promise.allSettled(stage.slots.map((s) => s.ready)).then(() => {
-    setTimeout(() => {
-      document.getElementById('artBadge').hidden = !Object.values(slotStatus).includes('placeholder');
-    }, 300);
-  });
+  // Placeholder badge (kept in sync as artwork is uploaded or reset)
+  const updateBadge = () => {
+    document.getElementById('artBadge').hidden = !Object.values(slotStatus).includes('placeholder');
+  };
+  const artPanel = buildArtworkPanel({ canvas, camera, onChange: updateBadge });
+  setupLogoMove({ canvas, camera, controls, sign: stage.logoSign, row: artPanel.rows.logo.el, label: labels.byId.logo });
+  Promise.allSettled(stage.slots.map((s) => s.ready)).then(() => setTimeout(updateBadge, 300));
 
   // Hook for batch renders (used to produce the deck PNGs)
   window.__opf = {

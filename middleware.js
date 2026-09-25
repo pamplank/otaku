@@ -26,17 +26,17 @@ function page(error = false) {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
 <title>OPF 2027 · The Sticker Stage</title>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,900&family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#1b191c;font-family:Inter,system-ui,sans-serif;color:#242224;padding:16px}
-  form{background:#fff;border:2.5px solid #242224;box-shadow:8px 8px 0 #FF66AD;padding:24px 24px 20px;width:min(380px,100%)}
-  p.e{margin:0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b666c}
-  h1{margin:4px 0 16px;font-family:'Archivo Black',sans-serif;font-weight:400;font-size:26px;text-transform:uppercase;line-height:1.05}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#1b191c;font-family:Montserrat,system-ui,sans-serif;color:#242224;padding:16px}
+  form{background:#fff;border:2px solid #242224;border-radius:16px;box-shadow:8px 8px 0 #FF66AD;padding:24px 24px 20px;width:min(380px,100%)}
+  p.e{margin:0;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5f5a60}
+  h1{margin:6px 0 16px;font-family:Archivo,'Arial Black',sans-serif;font-weight:900;font-stretch:125%;font-size:25px;text-transform:uppercase;line-height:1}
   label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
-  input{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:2px solid #242224;outline:none}
+  input{width:100%;font:inherit;font-size:16px;padding:10px 14px;border:2px solid #242224;border-radius:10px;outline:none}
   input:focus{box-shadow:0 0 0 3px #00CAD8}
-  button{margin-top:14px;width:100%;font-family:'Archivo Black',sans-serif;font-size:15px;text-transform:uppercase;padding:12px;background:#FFF33F;border:2.5px solid #242224;box-shadow:4px 4px 0 #242224;cursor:pointer}
+  button{margin-top:14px;width:100%;font-family:Archivo,'Arial Black',sans-serif;font-weight:900;font-stretch:125%;font-size:14px;text-transform:uppercase;padding:12px;background:#FFF33F;border:2px solid #242224;border-radius:999px;box-shadow:4px 4px 0 #242224;cursor:pointer}
   button:active{transform:translate(3px,3px);box-shadow:1px 1px 0 #242224}
   .err{margin:10px 0 0;font-size:13px;font-weight:600;color:#c0314f}
   .foot{margin:14px 0 0;font-size:11.5px;color:#6b666c}

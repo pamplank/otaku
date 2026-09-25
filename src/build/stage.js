@@ -1,10 +1,10 @@
-// The Sticker Stage: deck, LED, sticker-card frame, lightbox, wings, stars, truss, PA.
+// The Sticker Stage: deck, LED, sticker-card frame, logo sign, wings, stars, truss, PA.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { stage as S, palette as P } from '../../stage.config.js';
 import { L } from '../layout.js';
-import { toon, flat, box, outline, stickerPanel, starSticker, canvasTexture, OUTLINE } from '../sticker.js';
-import { makeSlot, placeholders } from '../slots.js';
+import { toon, flat, box, outline, stickerPanel, starSticker, canvasTexture, drawSparkle, OUTLINE } from '../sticker.js';
+import { makeSlot, makeCutoutSlot, placeholders } from '../slots.js';
 
 const TRUSS_COLOR = '#c9ced3';
 
@@ -59,7 +59,8 @@ function buildTruss(g) {
   const legGeo = trussGeometry(legLen, s).rotateZ(Math.PI / 2);
   const spanGeo = trussGeometry(T.spanOuter, s);
   const sideGeo = trussGeometry(T.depth - s, s).rotateY(Math.PI / 2);
-  for (const x of [-lx, lx]) for (const z of [zf, zb]) {
+  const clad = S.arch.enabled; // the front goalpost is inside the arch cladding
+  for (const x of [-lx, lx]) for (const z of clad ? [zb] : [zf, zb]) {
     add(legGeo, x, legLen / 2, z);
     const plate = box(0.8, 0.03, 0.8, toon('#3a373a'), { line: OUTLINE });
     plate.position.set(x, 0.015, z);
@@ -69,7 +70,7 @@ function buildTruss(g) {
     g.add(ballast);
   }
   const yTop = T.top - s / 2;
-  add(spanGeo, 0, yTop, zf);
+  if (!clad) add(spanGeo, 0, yTop, zf);
   add(spanGeo, 0, yTop, zb);
   add(sideGeo, -lx, yTop, (zf + zb) / 2);
   add(sideGeo, lx, yTop, (zf + zb) / 2);
@@ -86,7 +87,7 @@ function buildFixtures(g) {
   for (let i = 0; i < n; i++) {
     const x = n === 1 ? 0 : -span / 2 + (span * i) / (n - 1);
     const f = new THREE.Group();
-    f.position.set(x, T.top - T.size, L.trussFrontZ);
+    f.position.set(x, S.arch.enabled ? L.archHeaderBottom : T.top - T.size, L.trussFrontZ);
     const clamp = box(0.34, 0.12, 0.28, bodyMat);
     clamp.position.y = -0.06;
     f.add(clamp);
@@ -111,6 +112,98 @@ function buildFixtures(g) {
     fixtures.push({ head, lensMat, color: colors[i % colors.length], target });
   }
   return fixtures;
+}
+
+// ─── Front arch ─────────────────────────────────────────────────────────────
+// Printed cladding around the front truss goalpost, styled after the OPF entrance
+// arch: teal with white swooshes, light checker patches, stars and dark corner
+// wedges. The print is drawn in world metres across the whole arch face, so it
+// runs on from the pillars into the header.
+const PPM = 150; // print resolution, pixels per metre
+
+function drawArchPrint(ctx, xMax, yTop) {
+  ctx.fillStyle = P.teal;
+  ctx.fillRect(-xMax, 0, 2 * xMax, yTop);
+
+  // Checker patches: lower pillars and the header ends
+  const sq = 0.22;
+  ctx.fillStyle = P.tealLight;
+  for (let y = 0; y < yTop; y += sq) {
+    for (let x = -xMax; x < xMax; x += sq) {
+      if ((Math.round(x / sq) + Math.round(y / sq)) % 2) continue;
+      const pillar = y > 0.35 && y < 2.5;
+      const headerEnd = y > yTop - 1.1 && Math.abs(x) > xMax - 2.2;
+      if (pillar || headerEnd) ctx.fillRect(x, y, sq, sq);
+    }
+  }
+
+  // White swooshes: a double sweep over the whole arch, curls near the feet
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineCap = 'round';
+  for (const [rx, ry, lw] of [[xMax + 0.7, yTop - 1.15, 0.06], [xMax + 0.95, yTop - 0.9, 0.035]]) {
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.ellipse(0, 0.9, rx, ry, 0, 0.12 * Math.PI, 0.88 * Math.PI);
+    ctx.stroke();
+  }
+  ctx.lineWidth = 0.04;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.ellipse(side * (xMax - 0.2), 1.1, 0.55, 0.75, 0, side < 0 ? -0.6 * Math.PI : -0.4 * Math.PI, side < 0 ? 0.35 * Math.PI : 0.65 * Math.PI, side > 0);
+    ctx.stroke();
+  }
+
+  // Dark wedges in the header's top corners, with small stars
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = '#2d2b52';
+    ctx.beginPath();
+    ctx.moveTo(side * xMax, yTop);
+    ctx.lineTo(side * (xMax - 1.7), yTop);
+    ctx.lineTo(side * xMax, yTop - 0.95);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 4-point stars (x, y, size, colour)
+  const stars = [
+    [-xMax + 0.45, 5.95, 0.1, P.yellow], [-xMax + 0.95, 5.85, 0.07, P.pink], [xMax - 0.5, 5.95, 0.1, P.yellow],
+    [xMax - 1.0, 5.8, 0.07, P.pink], [xMax - 0.35, 5.6, 0.06, P.white],
+    [-xMax + 0.3, 3.3, 0.09, P.white], [-xMax + 0.62, 2.9, 0.07, P.pink], [-xMax + 0.25, 1.9, 0.06, P.yellow],
+    [xMax - 0.3, 3.6, 0.09, P.white], [xMax - 0.6, 3.1, 0.07, P.yellow], [xMax - 0.35, 1.6, 0.06, P.pink],
+    [-3.2, 5.45, 0.07, P.white], [3.4, 5.5, 0.07, P.white], [-1.6, 5.35, 0.05, P.pink], [1.9, 5.35, 0.05, P.yellow],
+  ];
+  for (const [x, y, r, c] of stars) drawSparkle(ctx, x, y, r, c, P.dark, 0.012);
+}
+
+// Texture for the face of the arch covering x0..x0+w, y0..y0+h (world metres).
+function archFace(x0, y0, w, h, xMax, yTop) {
+  return canvasTexture(Math.round(w * PPM), Math.round(h * PPM), (ctx, pw, ph) => {
+    ctx.setTransform(PPM, 0, 0, -PPM, -x0 * PPM, (y0 + h) * PPM); // world metres, y up
+    drawArchPrint(ctx, xMax, yTop);
+  });
+}
+
+function buildArch(g) {
+  const A = S.arch;
+  const T = S.truss;
+  const xMax = L.archHalfWidth;
+  const yTop = T.top;
+  const plain = toon(P.teal);
+  const printed = (x0, y0, w, h) => toon(P.white, { map: archFace(x0, y0, w, h, xMax, yTop) });
+  // BoxGeometry faces: +x, -x, +y, -y, +z (front), -z (back)
+  const pillarH = L.archHeaderBottom;
+  for (const side of [-1, 1]) {
+    const x = side * L.trussLegX;
+    const front = printed(x - A.pillarWidth / 2, 0, A.pillarWidth, pillarH);
+    const pillar = box(A.pillarWidth, pillarH, A.pillarDepth, [plain, plain, plain, plain, front, plain]);
+    pillar.position.set(x, pillarH / 2, L.trussFrontZ);
+    g.add(pillar);
+  }
+  const hw = 2 * xMax;
+  const front = printed(-xMax, L.archHeaderBottom, hw, A.headerHeight);
+  const header = box(hw, A.headerHeight, A.headerDepth, [plain, plain, plain, plain, front, plain]);
+  header.position.set(0, L.archHeaderBottom + A.headerHeight / 2, L.trussFrontZ);
+  g.add(header);
 }
 
 export function buildStage() {
@@ -182,22 +275,35 @@ export function buildStage() {
   led.add(grid);
   g.add(led);
 
-  // OPF logo lightbox (face is an image slot; logo shown exactly as supplied)
+  if (S.arch.enabled) buildArch(g);
+
+  // OPF logo: die-cut sign sitting on the front arch's header
   const LG = S.logo;
-  const lb = new THREE.Group();
-  lb.position.set(0, LG.top - LG.height / 2, L.frameFront + LG.depth / 2 + 0.02);
-  const lbBody = box(LG.width, LG.height, LG.depth, toon(P.white));
-  lb.add(lbBody);
-  const lbShadow = box(LG.width, LG.height, 0.05, toon(P.dark), { edges: false });
-  lbShadow.position.set(0.1, -0.1, -LG.depth / 2 - 0.01);
-  lb.add(lbShadow);
-  const logoSlot = makeSlot('logo', {
-    w: LG.width - 0.06, h: LG.height - 0.06, bg: P.white, padding: LG.padding,
-    placeholder: placeholders.logo,
+  // The sign can be moved in the viewer (see logoMove.js): `pose` overrides the
+  // default placement, which follows the artwork's height.
+  const logoSign = { group: null, height: LG.maxHeight, pose: null, onMove: null };
+  logoSign.defaults = () => ({
+    x: 0, z: L.logoZ, scale: 1,
+    y: Math.min(S.truss.top - LG.drop + logoSign.height / 2, S.ceiling.height - 0.15 - logoSign.height / 2),
+    ...LG.position,
   });
-  logoSlot.group.position.z = LG.depth / 2 + 0.002;
-  lb.add(logoSlot.group);
-  g.add(lb);
+  logoSign.apply = () => {
+    const p = { ...logoSign.defaults(), ...logoSign.pose };
+    logoSign.group.position.set(p.x, p.y, p.z);
+    logoSign.group.scale.setScalar(p.scale);
+    logoSign.onMove?.(p);
+  };
+  const logoSlot = makeCutoutSlot('logo', {
+    width: LG.width, maxHeight: LG.maxHeight, thickness: LG.thickness, border: LG.border,
+    boardColor: P[LG.board], edgeColor: new THREE.Color(P[LG.board]).multiplyScalar(0.82), placeholder: placeholders.logo,
+    // By default the bottom edge hangs `drop` below the header top, clear of the ceiling.
+    onBuild: (sign, w, h) => {
+      logoSign.group = sign;
+      logoSign.height = h;
+      logoSign.apply();
+    },
+  });
+  g.add(logoSlot.group);
 
   // Wings (cyan left, yellow right) with KV/sponsor print slots
   const W = S.wings;
@@ -243,8 +349,8 @@ export function buildStage() {
   buildTruss(g);
   const fixtures = buildFixtures(g);
 
-  // Night glow rims: HDR-bright halos behind the LED and lightbox. Only these (not the
-  // artwork itself) exceed the bloom threshold, so KV and logo stay crisp and unaltered.
+  // Night glow rim: HDR-bright halo behind the LED. Only this (not the artwork
+  // itself) exceeds the bloom threshold, so the KV stays crisp and unaltered.
   const glows = [];
   const halo = (w, h, color, strength, x, y, z) => {
     const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(strength), toneMapped: false });
@@ -255,13 +361,12 @@ export function buildStage() {
     glows.push(m);
   };
   halo(LED.width + 0.22, LED.height + 0.22, '#ffd6ec', 2.2, 0, LED.bottom + LED.height / 2, L.ledZ - 0.055);
-  halo(LG.width + 0.12, LG.height + 0.12, '#ffffff', 1.7, 0, LG.top - LG.height / 2, L.frameFront + 0.015);
 
   return {
     group: g,
     fixtures,
     glows,
-    lightboxMat: logoSlot.bgMat,
     slots: [ledSlot, logoSlot],
+    logoSign,
   };
 }
