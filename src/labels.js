@@ -44,13 +44,13 @@ export function buildLabels() {
   const group = new THREE.Group();
   group.name = 'labels';
   const all = [];
-  for (const d of hotspotDefs()) {
+  hotspotDefs().forEach((d, i) => {
     const el = document.createElement('div');
-    el.className = 'hotspot';
+    el.className = `hotspot hs-c${i % 3}`; // header strip colour: cyan / pink / yellow
     el.innerHTML = `
       <button class="hs-pin" type="button" aria-expanded="false"><span class="hs-dot"></span><span class="hs-title">${d.title}</span></button>
       <div class="hs-card" role="dialog" aria-label="${d.title}">
-        <h4>${d.title}</h4><ul>${d.lines.map((l) => `<li>${l}</li>`).join('')}</ul>
+        <h4 class="display">${d.title}</h4><ul>${d.lines.map((l) => `<li>${l}</li>`).join('')}</ul>
         <p class="hs-tbc">All sizes TBC · site survey</p>
       </div>`;
     const pin = el.querySelector('.hs-pin');
@@ -66,7 +66,7 @@ export function buildLabels() {
     const obj = new CSS2DObject(el);
     obj.position.set(...d.pos);
     group.add(obj);
-  }
+  });
   const closeAll = () => all.forEach((o) => o.classList.remove('open'));
   return { group, closeAll };
 }

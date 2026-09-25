@@ -8,7 +8,9 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { palette as P } from '../stage.config.js';
 
 export const FONT = '"Archivo Black", "Arial Black", sans-serif';
-export const FONT_BODY = '"Inter", Arial, sans-serif';
+export const FONT_BODY = '"Montserrat", Arial, sans-serif';
+// Wide heavy display face (use with fontStretch = 'expanded'), as in the OPF deck
+export const FONT_DISPLAY = '"Archivo", "Archivo Black", "Arial Black", sans-serif';
 
 // ─── Lines ──────────────────────────────────────────────────────────────────
 // Widths are authored for a 1080 px-tall frame and rescaled to the viewport,

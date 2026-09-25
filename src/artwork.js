@@ -62,15 +62,17 @@ export function buildArtworkPanel({ canvas, camera, onChange }) {
     const el = document.createElement('li');
     el.className = 'art-row';
     el.innerHTML = `
-      <div class="art-thumb"></div>
-      <div class="art-body">
-        <p class="art-title">${info.title}</p>
-        <p class="art-spec">${slot.spec ?? `${m(slot.width)} × ${m(slot.height)} m · ${ratio(slot.aspect)} · ${info.kind.toLowerCase()}`}</p>
-        <p class="art-status"></p>
-        <p class="art-error" role="alert" hidden></p>
-        <div class="art-btns">
-          <label class="art-upload">Upload<input type="file" accept="${info.accept}" hidden /></label>
-          <button class="art-reset" type="button">Reset</button>
+      <p class="art-title display">${info.title}</p>
+      <div class="art-main">
+        <div class="art-thumb"></div>
+        <div class="art-body">
+          <p class="art-spec">${slot.spec ?? `${m(slot.width)} × ${m(slot.height)} m · ${ratio(slot.aspect)} · ${info.kind.toLowerCase()}`}</p>
+          <p class="art-status"></p>
+          <p class="art-error" role="alert" hidden></p>
+          <div class="art-btns">
+            <label class="art-upload">Upload<input type="file" accept="${info.accept}" hidden /></label>
+            <button class="art-reset" type="button">Reset</button>
+          </div>
         </div>
       </div>`;
     list.append(el);
