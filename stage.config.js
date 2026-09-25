@@ -56,14 +56,17 @@ export const stage = {
     position: null,
   },
 
-  // Front arch: the front truss goalpost clad as a printed teal arch, styled after
-  // the OPF entrance arch on site. Set enabled: false to show the bare truss.
+  // Printed teal header cladding on the top truss, styled after the OPF entrance
+  // arch on site; the logo sign sits on its front. The truss legs stay bare so
+  // nothing blocks the audience's view. Set enabled: false to show the bare truss.
   arch: {
     enabled: true,
-    pillarWidth: 0.9,   // EST cladding around each front truss leg
-    pillarDepth: 0.6,   // EST
+    box: true,          // header on all four top beams (a box around the top); false = front beam only
+    pillars: false,     // also clad the front legs as printed pillars (they block side sightlines)
     headerHeight: 1.0,  // EST header cladding, hanging from the truss top
     headerDepth: 0.5,   // EST
+    pillarWidth: 0.9,   // EST, only with pillars: true
+    pillarDepth: 0.6,   // EST
   },
 
   // Wings: cyan left, yellow right, on the floor either side of the deck.
