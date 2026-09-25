@@ -1,21 +1,22 @@
 // Artwork slots (LED, wings, logo). Official CyberE files dropped in /public/assets,
-// or uploaded in the viewer's Artwork panel, are shown whole ("contain"): never
-// cropped, stretched, recoloured or redrawn. Until then each slot shows a clearly
-// labelled placeholder.
+// or published from admin mode (shared with everyone, see shared.js), are shown
+// whole ("contain"): never cropped, stretched, recoloured or redrawn. Until then
+// each slot shows a clearly labelled placeholder.
 import * as THREE from 'three';
 import { assets as A, palette as P } from '../stage.config.js';
 import { canvasTexture, outline, OUTLINE, FONT, FONT_BODY } from './sticker.js';
 import { dieCut } from './cutout.js';
-import { loadArt, saveArt, clearArt } from './artStore.js';
 
 const base = import.meta.env.BASE_URL;
 export const slotStatus = {}; // key -> 'placeholder' | file path
+export const slotEvents = new EventTarget(); // 'change' whenever any slot's artwork changes
 
 const isVideo = (f) => /\.(mp4|webm|mov)$/i.test(f);
 
 function tryImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous'; // published files come from the storage domain
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
@@ -25,6 +26,7 @@ function tryImage(src) {
 function tryVideo(src) {
   return new Promise((resolve, reject) => {
     const v = document.createElement('video');
+    v.crossOrigin = 'anonymous';
     v.muted = true;
     v.loop = true;
     v.playsInline = true;
@@ -63,6 +65,12 @@ async function loadFirst(files) {
     }
   }
   return null;
+}
+
+// A published file: { url, name, type }
+async function loadEntry(entry) {
+  const video = entry.type ? entry.type.startsWith('video/') : isVideo(entry.name);
+  return { ...(await loadSource(entry.url, video)), file: entry.name };
 }
 
 async function loadBlob(blob, name) {
@@ -173,7 +181,7 @@ const placeholders = {
 };
 
 // ─── Slot controller ────────────────────────────────────────────────────────
-// Artwork priority: upload saved in this browser > /public/assets file > placeholder.
+// Artwork priority: published (shared) file > /public/assets file > placeholder.
 // `apply(res)` puts loaded artwork (or null = placeholder) on the model.
 export const slots = {}; // key -> slot controller
 
@@ -185,8 +193,9 @@ function disposeRes(res) {
 
 function slotController(key, { apply, info, placeholderThumb }) {
   let current = null; // loaded artwork ({ tex, video?, url? }) or null for the placeholder
-  let assetRes = null; // the /public/assets file, kept to fall back to on reset
+  let assetRes = null; // the /public/assets file, shown when nothing is published
   let seq = 0; // ignores loads that finish after a newer one started
+  let sharedUrl = null; // URL of the published file currently applied
 
   function show(res, source) {
     if (current && current !== assetRes) disposeRes(current);
@@ -198,59 +207,53 @@ function slotController(key, { apply, info, placeholderThumb }) {
     slot.source = res ? source : 'placeholder';
     slot.file = res ? res.file : null;
     slot.onChange?.(slot);
+    slotEvents.dispatchEvent(new Event('change'));
   }
 
   const slot = {
     key, ...info, meshes: [],
     source: 'placeholder', file: null, onChange: null,
+    pending: false, // true while admin mode publishes a new file here
     isVideo: () => !!current?.video,
     // Image/video URL of what the slot shows, for the panel's thumbnail.
     thumbSrc() {
       if (!current) return placeholderThumb();
       return current.thumb?.() ?? (current.video ? current.video.src : current.tex.image.src);
     },
-    // Show a user-supplied file. Throws if the browser cannot decode it.
-    async setFile(file) {
+    // Show a local file straight away (admin, while it publishes). Throws if the
+    // browser cannot decode it.
+    async showFile(file) {
       const id = ++seq;
       const res = await loadBlob(file, file.name);
       if (id !== seq) return disposeRes(res);
-      assetWanted = false;
-      show(res, 'upload');
-      saveArt(key, file);
+      show(res, 'shared');
     },
-    // Drop the upload: back to the /public/assets file, or the placeholder.
-    reset() {
-      ++seq;
-      assetWanted = true;
-      clearArt(key);
-      show(assetRes, 'asset');
+    // Record that the file now showing was published at `url` (no reload).
+    published(url) { sharedUrl = url; },
+    // Apply this slot's entry from the shared state ({ url, name, type } or null).
+    async setShared(entry) {
+      const url = entry?.url ?? null;
+      if (slot.pending || url === sharedUrl) return;
+      sharedUrl = url;
+      const id = ++seq;
+      if (!entry) return show(assetRes, 'asset');
+      try {
+        const res = await loadEntry(entry);
+        if (id !== seq) return disposeRes(res);
+        show(res, 'shared');
+      } catch {
+        if (id === seq) show(assetRes, 'asset'); // file missing or unreadable
+      }
     },
   };
   slots[key] = slot;
   slotStatus[key] = 'placeholder';
 
-  // A saved upload shows as soon as it loads; the /public/assets probe (which can
-  // be slow for video) finishes in the background and is shown only if nothing
-  // else was chosen meanwhile.
-  let assetWanted = true;
-  const assetReady = loadFirst(A[key]).then((asset) => {
+  // The /public/assets probe (slow for video) shows only if nothing is published.
+  const ready = loadFirst(A[key]).then((asset) => {
     assetRes = asset;
-    if (asset && assetWanted && slot.source === 'placeholder') show(asset, 'asset');
+    if (asset && sharedUrl === null && slot.source === 'placeholder') show(asset, 'asset');
   });
-  const ready = (async () => {
-    const id = seq;
-    const saved = await loadArt(key);
-    if (saved?.blob && id === seq) {
-      try {
-        const res = await loadBlob(saved.blob, saved.name);
-        if (id !== seq) return disposeRes(res);
-        assetWanted = false;
-        show(res, 'upload');
-        return;
-      } catch { clearArt(key); }
-    }
-    await assetReady;
-  })();
 
   return { slot, ready };
 }

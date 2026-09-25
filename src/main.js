@@ -8,7 +8,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { render as R, palette as P } from '../stage.config.js';
 import { updateLineResolution, FONT, FONT_DISPLAY, FONT_BODY } from './sticker.js';
-import { slotStatus } from './slots.js';
+import { slotStatus, slots, slotEvents } from './slots.js';
 import { buildStage } from './build/stage.js';
 import { buildHall } from './build/hall.js';
 import { buildDressing } from './build/dressing.js';
@@ -17,7 +17,9 @@ import { buildLighting } from './lighting.js';
 import { buildLabels } from './labels.js';
 import { createCameraRig } from './cameras.js';
 import { buildArtworkPanel } from './artwork.js';
-import { setupLogoMove } from './logoMove.js';
+import { setupLogoMove, attachLogoLabel } from './logoMove.js';
+import { setupAdminEntry } from './admin.js';
+import { fetchState, adminStatus } from './shared.js';
 
 async function init() {
   try {
@@ -239,13 +241,43 @@ async function init() {
     labelRenderer.render(scene, camera);
   });
 
-  // Placeholder badge (kept in sync as artwork is uploaded or reset)
+  // Placeholder badge (kept in sync as artwork changes)
   const updateBadge = () => {
     document.getElementById('artBadge').hidden = !Object.values(slotStatus).includes('placeholder');
   };
-  const artPanel = buildArtworkPanel({ canvas, camera, onChange: updateBadge });
-  setupLogoMove({ canvas, camera, controls, sign: stage.logoSign, row: artPanel.rows.logo.el, label: labels.byId.logo });
+  slotEvents.addEventListener('change', updateBadge);
   Promise.allSettled(stage.slots.map((s) => s.ready)).then(() => setTimeout(updateBadge, 300));
+
+  // ─── Shared artwork + logo pose (everyone), admin mode (editing) ───
+  let shared = null;
+  let logoMove = null;
+  const setShared = (state) => { shared = state; };
+  const applyShared = (state) => {
+    if (!state) return;
+    shared = state;
+    for (const [key, slot] of Object.entries(slots)) slot.setShared(state.slots?.[key] ?? null);
+    if (!logoMove?.isBusy()) {
+      stage.logoSign.pose = state.logoPose ?? null;
+      stage.logoSign.apply();
+    }
+  };
+  attachLogoLabel(stage.logoSign, labels.byId.logo);
+  (async () => {
+    const [state, status] = await Promise.all([fetchState(), adminStatus()]);
+    applyShared(state);
+    setupAdminEntry(status);
+    if (status.admin) {
+      document.getElementById('artBtn').hidden = false;
+      const artPanel = buildArtworkPanel({ canvas, camera, getState: () => shared, setState: setShared });
+      logoMove = setupLogoMove({ canvas, camera, controls, sign: stage.logoSign, row: artPanel.rows.logo.el, setState: setShared });
+    }
+    // Pick up other people's changes while the page is open
+    setInterval(async () => {
+      if (document.hidden) return;
+      const next = await fetchState();
+      if (next && next.updatedAt !== shared?.updatedAt) applyShared(next);
+    }, 30000);
+  })();
 
   // Hook for batch renders (used to produce the deck PNGs)
   window.__opf = {

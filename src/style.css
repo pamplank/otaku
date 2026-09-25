@@ -18,6 +18,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--ui-bg);
@@ -89,7 +90,7 @@ button:focus-visible, .check input:focus-visible { outline: 3px solid var(--cyan
 .check input { accent-color: var(--pink); margin: 0; }
 
 .toggles {
-  position: absolute; right: 16px; top: 126px;
+  position: absolute; right: 16px; top: 158px;
   display: flex; flex-direction: column; align-items: flex-end; gap: 9px;
 }
 .chip {
@@ -254,6 +255,37 @@ button:focus-visible, .check input:focus-visible { outline: 3px solid var(--cyan
   padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--white); background: var(--cyan); color: var(--dark);
   font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
 }
+
+/* ─── Admin mode ─── */
+.admin-link {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--white); background: rgba(36, 34, 36, 0.6); border: 0; border-radius: 999px; padding: 4px 11px;
+}
+.admin-link:hover { background: var(--dark); }
+.admin-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.admin-pill { background: var(--pink); }
+.admin-logout {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+  background: none; border: 0; padding: 2px 4px; text-decoration: underline; color: #4a454b;
+}
+.admin-dialog {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px;
+  background: rgba(27, 25, 28, 0.55);
+}
+.admin-form { width: min(380px, 100%); padding: 20px 22px 18px; }
+.admin-form.is-busy { opacity: 0.7; pointer-events: none; }
+.admin-form h2 { margin: 0 0 6px; font-size: 22px; }
+.admin-text { margin: 0 0 14px; font-size: 12.5px; font-weight: 500; line-height: 1.45; color: #4a454b; }
+.admin-label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.admin-form input {
+  width: 100%; font: inherit; font-size: 16px; padding: 10px 14px;
+  border: var(--line) solid var(--dark); border-radius: 10px; outline: none;
+}
+.admin-form input:focus { box-shadow: 0 0 0 3px var(--cyan); }
+.admin-err { margin: 10px 0 0; font-size: 12.5px; font-weight: 700; color: #c0203f; }
+.admin-btns { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+.admin-submit { background: var(--yellow); border-radius: 999px; padding: 10px 22px; font-size: 13px; }
+.admin-cancel { background: none; border: 0; font-size: 12px; font-weight: 700; text-decoration: underline; color: #4a454b; }
 
 /* ─── Small screens ─── */
 @media (max-width: 720px) {
