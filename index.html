@@ -15,12 +15,25 @@
       <canvas id="scene" aria-label="3D model of the Sticker Stage in the Crystal Pavilion"></canvas>
       <div id="labels"></div>
 
-      <header class="card title-card">
-        <p class="eyebrow">Otaku Pop Fes 2027 · Okada Manila</p>
-        <h1>The Sticker Stage</h1>
-        <p class="sub">Crystal Pavilion · 3D concept · all sizes TBC</p>
-        <p class="badge" id="artBadge" hidden>Placeholder artwork</p>
-      </header>
+      <div class="left-col">
+        <header class="card title-card">
+          <p class="eyebrow">Otaku Pop Fes 2027 · Okada Manila</p>
+          <h1>The Sticker Stage</h1>
+          <p class="sub">Crystal Pavilion · 3D concept · all sizes TBC</p>
+          <p class="badge" id="artBadge" hidden>Placeholder artwork</p>
+          <button id="artBtn" class="btn btn-art" type="button" aria-expanded="false" aria-controls="artPanel">Edit artwork</button>
+        </header>
+
+        <section id="artPanel" class="card art-panel" aria-label="Artwork" hidden>
+          <header class="art-head">
+            <h2>Artwork</h2>
+            <button class="art-close" type="button" aria-label="Close artwork panel">×</button>
+          </header>
+          <p class="art-note">Upload a design, drop a file on a row, or double-click a slot in the 3D view. Designs are shown whole, never cropped.</p>
+          <ul class="art-list"></ul>
+          <p class="art-note art-foot">Uploads are saved in this browser only. To show them to everyone, put the files in <code>public/assets</code> and push.</p>
+        </section>
+      </div>
 
       <div class="actions">
         <button id="exportBtn" class="btn btn-export" type="button">

@@ -31,8 +31,13 @@ body.ready #scene { opacity: 1; }
   border: var(--line) solid var(--dark);
   box-shadow: 6px 6px 0 var(--pink);
 }
+.left-col {
+  position: absolute; top: 16px; left: 16px; bottom: 90px; z-index: 20;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+  pointer-events: none;
+}
+.left-col > * { pointer-events: auto; }
 .title-card {
-  position: absolute; top: 16px; left: 16px;
   padding: 12px 16px 12px; max-width: min(360px, calc(100vw - 32px));
 }
 .eyebrow { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6b666c; }
@@ -127,6 +132,56 @@ button:focus-visible, .check input:focus-visible { outline: 3px solid var(--cyan
 .hs-card ul { margin: 0; padding: 0 0 0 16px; font-size: 12.5px; line-height: 1.45; }
 .hs-tbc { margin: 6px 0 0; font-size: 10.5px; font-weight: 700; color: #8a848b; text-transform: uppercase; letter-spacing: 0.04em; }
 
+/* ─── Artwork panel ─── */
+.btn-art {
+  background: var(--pink); font-family: var(--font-display); font-size: 13px; text-transform: uppercase;
+  display: block; margin-top: 10px; padding: 7px 14px;
+}
+.btn-art[aria-expanded='true'] { background: var(--dark); color: var(--pink); }
+.art-panel {
+  width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column;
+  padding: 12px 14px; overflow: hidden; min-height: 0; flex: 0 1 auto;
+}
+.art-panel[hidden] { display: none; }
+.art-head { display: flex; align-items: center; justify-content: space-between; }
+.art-head h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 18px; text-transform: uppercase; }
+.art-close {
+  width: 30px; height: 30px; border: 2px solid var(--dark); background: var(--white);
+  font-size: 18px; line-height: 1; box-shadow: 2px 2px 0 var(--dark);
+}
+.art-note { margin: 6px 0 10px; font-size: 12px; line-height: 1.4; color: #4a454b; }
+.art-note code { font-size: 11px; background: #f1efec; padding: 0 3px; }
+.art-foot { margin: 10px 0 0; }
+.art-list { list-style: none; margin: 0; padding: 2px 4px 4px 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; min-height: 0; }
+.art-row {
+  display: flex; gap: 10px; align-items: flex-start; padding: 8px;
+  border: 2px dashed #b9b4b0; background: #faf9f7; transition: background 0.1s, border-color 0.1s;
+}
+.art-row[data-source='upload'], .art-row[data-source='asset'] { border-style: solid; border-color: var(--dark); background: var(--white); }
+.art-row.is-over { border-color: var(--cyan); background: #e6fbfc; }
+.art-row.is-busy { opacity: 0.6; pointer-events: none; }
+.art-thumb {
+  flex: none; width: 64px; height: 80px; background: var(--dark); border: 2px solid var(--dark);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.art-thumb img, .art-thumb video { max-width: 100%; max-height: 100%; display: block; }
+.art-body { min-width: 0; flex: 1; }
+.art-title { margin: 0; font-family: var(--font-display); font-size: 13px; text-transform: uppercase; }
+.art-spec { margin: 2px 0 0; font-size: 11px; color: #6b666c; }
+.art-status { margin: 4px 0 0; font-size: 11.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.art-row[data-source='placeholder'] .art-status { color: #a0527a; }
+.art-error { margin: 4px 0 0; font-size: 11.5px; font-weight: 700; color: #c0203f; }
+.art-error[hidden] { display: none; }
+.art-btns { display: flex; gap: 6px; margin-top: 6px; }
+.art-upload, .art-reset {
+  display: inline-flex; align-items: center; min-height: 30px; padding: 4px 10px; cursor: pointer;
+  border: 2px solid var(--dark); box-shadow: 2px 2px 0 var(--dark); font-size: 12px; font-weight: 700;
+}
+.art-upload { background: var(--yellow); }
+.art-reset { background: var(--white); }
+.art-reset[hidden] { display: none; }
+.art-upload:focus-within { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
 /* ─── Small screens ─── */
 @media (max-width: 720px) {
   .title-card { padding: 8px 12px; max-width: calc(100vw - 150px); }
@@ -142,5 +197,8 @@ button:focus-visible, .check input:focus-visible { outline: 3px solid var(--cyan
   .presets button { font-size: 12px; padding: 6px 9px; }
   .hint { display: none; }
   .hs-title { display: none; }
+  .btn-art { padding: 6px 10px; font-size: 12px; }
+  .left-col { top: 12px; left: 12px; right: 12px; bottom: 150px; gap: 10px; }
+  .art-panel { width: 100%; }
   .hotspot.open .hs-title { display: inline; }
 }

@@ -1,9 +1,11 @@
-// Artwork slots (LED, wings, logo). Official CyberE files dropped in /public/assets
-// are shown whole ("contain"): never cropped, stretched, recoloured or redrawn.
-// Until then each slot shows a clearly labelled placeholder.
+// Artwork slots (LED, wings, logo). Official CyberE files dropped in /public/assets,
+// or uploaded in the viewer's Artwork panel, are shown whole ("contain"): never
+// cropped, stretched, recoloured or redrawn. Until then each slot shows a clearly
+// labelled placeholder.
 import * as THREE from 'three';
 import { assets as A, palette as P } from '../stage.config.js';
 import { canvasTexture, FONT, FONT_BODY } from './sticker.js';
+import { loadArt, saveArt, clearArt } from './artStore.js';
 
 const base = import.meta.env.BASE_URL;
 export const slotStatus = {}; // key -> 'placeholder' | file path
@@ -35,28 +37,42 @@ function tryVideo(src) {
   });
 }
 
+async function loadSource(src, video) {
+  if (video) {
+    const v = await tryVideo(src);
+    v.play().catch(() => {});
+    const tex = new THREE.VideoTexture(v);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return { tex, aspect: v.videoWidth / v.videoHeight, video: v };
+  }
+  const img = await tryImage(src);
+  const tex = new THREE.Texture(img);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return { tex, aspect: img.naturalWidth / img.naturalHeight };
+}
+
 async function loadFirst(files) {
   for (const f of files) {
-    const src = base + f;
     try {
-      if (isVideo(f)) {
-        const v = await tryVideo(src);
-        v.play().catch(() => {});
-        const tex = new THREE.VideoTexture(v);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        return { tex, aspect: v.videoWidth / v.videoHeight, file: f };
-      }
-      const img = await tryImage(src);
-      const tex = new THREE.Texture(img);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 8;
-      tex.needsUpdate = true;
-      return { tex, aspect: img.naturalWidth / img.naturalHeight, file: f };
+      return { ...(await loadSource(base + f, isVideo(f))), file: f };
     } catch {
       /* not supplied yet: try the next name */
     }
   }
   return null;
+}
+
+async function loadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const video = blob.type ? blob.type.startsWith('video/') : isVideo(name);
+    return { ...(await loadSource(url, video)), file: name, url };
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw e;
+  }
 }
 
 // ─── Placeholders ───────────────────────────────────────────────────────────
@@ -145,11 +161,15 @@ const placeholders = {
 
 // ─── Slot ───────────────────────────────────────────────────────────────────
 // w × h plane facing +z. Content is contain-fitted inside (1 - 2·padding).
+// Artwork priority: upload saved in this browser > /public/assets file > placeholder.
+export const slots = {}; // key -> slot controller (see makeSlot)
+
 export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = true }) {
   const group = new THREE.Group();
   const MatClass = emissive ? THREE.MeshBasicMaterial : THREE.MeshToonMaterial;
 
   const bgMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new MatClass({ color: bg }));
+  bgMesh.userData.slotKey = key;
   group.add(bgMesh);
 
   const aw = w * (1 - 2 * padding);
@@ -162,18 +182,82 @@ export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = t
   const content = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), contentMat);
   content.position.z = 0.004;
   content.scale.set(aw, ah, 1);
+  content.userData.slotKey = key;
   group.add(content);
+
+  let current = null; // loaded artwork ({ tex, video?, url? }) or null for the placeholder
+  let assetRes = null; // the /public/assets file, kept to fall back to on reset
+  let seq = 0; // ignores loads that finish after a newer one started
+  let phThumb = null;
+
+  function show(res, source) {
+    if (current && current !== assetRes) dispose(current);
+    current = res;
+    if (!res) {
+      contentMat.map = phTex;
+      content.scale.set(aw, ah, 1);
+      slotStatus[key] = 'placeholder';
+    } else {
+      contentMat.map = res.tex;
+      const slotAspect = aw / ah;
+      if (res.aspect > slotAspect) content.scale.set(aw, aw / res.aspect, 1);
+      else content.scale.set(ah * res.aspect, ah, 1);
+      if (res.video) res.video.play().catch(() => {});
+      slotStatus[key] = res.file;
+    }
+    if (assetRes && res !== assetRes) assetRes.video?.pause();
+    contentMat.needsUpdate = true;
+    slot.source = res ? source : 'placeholder';
+    slot.file = res ? res.file : null;
+    slot.onChange?.(slot);
+  }
+
+  function dispose(res) {
+    res.tex.dispose();
+    if (res.video) { res.video.pause(); res.video.removeAttribute('src'); res.video.load(); }
+    if (res.url) URL.revokeObjectURL(res.url);
+  }
+
+  const slot = {
+    key, width: aw, height: ah, aspect: aw / ah, meshes: [bgMesh, content],
+    source: 'placeholder', file: null, onChange: null,
+    isVideo: () => !!current?.video,
+    // Image/video URL of what the slot shows, for the panel's thumbnail.
+    thumbSrc() {
+      if (!current) return (phThumb ??= phTex.image.toDataURL());
+      return current.video ? current.video.src : current.tex.image.src;
+    },
+    // Show a user-supplied file. Throws if the browser cannot decode it.
+    async setFile(file) {
+      const id = ++seq;
+      const res = await loadBlob(file, file.name);
+      if (id !== seq) return dispose(res);
+      show(res, 'upload');
+      saveArt(key, file);
+    },
+    // Drop the upload: back to the /public/assets file, or the placeholder.
+    reset() {
+      ++seq;
+      clearArt(key);
+      show(assetRes, 'asset');
+    },
+  };
+  slots[key] = slot;
   slotStatus[key] = 'placeholder';
 
-  const ready = loadFirst(A[key]).then((res) => {
-    if (!res) return;
-    contentMat.map = res.tex;
-    contentMat.needsUpdate = true;
-    const slotAspect = aw / ah;
-    if (res.aspect > slotAspect) content.scale.set(aw, aw / res.aspect, 1);
-    else content.scale.set(ah * res.aspect, ah, 1);
-    slotStatus[key] = res.file;
-  });
+  const ready = (async () => {
+    const id = seq;
+    const [saved, asset] = await Promise.all([loadArt(key), loadFirst(A[key])]);
+    assetRes = asset;
+    if (id !== seq) return; // the user already picked something
+    if (saved?.blob) {
+      try {
+        show(await loadBlob(saved.blob, saved.name), 'upload');
+        return;
+      } catch { clearArt(key); }
+    }
+    if (asset) show(asset, 'asset');
+  })();
 
   return { group, ready, bgMat: bgMesh.material, contentMat };
 }

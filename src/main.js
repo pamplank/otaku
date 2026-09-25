@@ -15,6 +15,7 @@ import { buildPeople } from './build/people.js';
 import { buildLighting } from './lighting.js';
 import { buildLabels } from './labels.js';
 import { createCameraRig } from './cameras.js';
+import { buildArtworkPanel } from './artwork.js';
 
 async function init() {
   try {
@@ -227,12 +228,12 @@ async function init() {
     labelRenderer.render(scene, camera);
   });
 
-  // Placeholder badge
-  Promise.allSettled(stage.slots.map((s) => s.ready)).then(() => {
-    setTimeout(() => {
-      document.getElementById('artBadge').hidden = !Object.values(slotStatus).includes('placeholder');
-    }, 300);
-  });
+  // Placeholder badge (kept in sync as artwork is uploaded or reset)
+  const updateBadge = () => {
+    document.getElementById('artBadge').hidden = !Object.values(slotStatus).includes('placeholder');
+  };
+  buildArtworkPanel({ canvas, camera, onChange: updateBadge });
+  Promise.allSettled(stage.slots.map((s) => s.ready)).then(() => setTimeout(updateBadge, 300));
 
   // Hook for batch renders (used to produce the deck PNGs)
   window.__opf = {
