@@ -59,8 +59,9 @@ function buildTruss(g) {
   const legGeo = trussGeometry(legLen, s).rotateZ(Math.PI / 2);
   const spanGeo = trussGeometry(T.spanOuter, s);
   const sideGeo = trussGeometry(T.depth - s, s).rotateY(Math.PI / 2);
-  const clad = S.arch.enabled; // the front goalpost is inside the arch cladding
-  for (const x of [-lx, lx]) for (const z of clad ? [zb] : [zf, zb]) {
+  const A = S.arch;
+  const cladLegs = A.enabled && A.pillars; // front legs inside printed pillars
+  for (const x of [-lx, lx]) for (const z of cladLegs ? [zb] : [zf, zb]) {
     add(legGeo, x, legLen / 2, z);
     const plate = box(0.8, 0.03, 0.8, toon('#3a373a'), { line: OUTLINE });
     plate.position.set(x, 0.015, z);
@@ -70,10 +71,13 @@ function buildTruss(g) {
     g.add(ballast);
   }
   const yTop = T.top - s / 2;
-  if (!clad) add(spanGeo, 0, yTop, zf);
-  add(spanGeo, 0, yTop, zb);
-  add(sideGeo, -lx, yTop, (zf + zb) / 2);
-  add(sideGeo, lx, yTop, (zf + zb) / 2);
+  // Top beams inside the header cladding are not drawn
+  if (!A.enabled) add(spanGeo, 0, yTop, zf);
+  if (!(A.enabled && A.box)) {
+    add(spanGeo, 0, yTop, zb);
+    add(sideGeo, -lx, yTop, (zf + zb) / 2);
+    add(sideGeo, lx, yTop, (zf + zb) / 2);
+  }
 }
 
 // Moving-head style fixtures hung under the front top truss.
@@ -114,11 +118,11 @@ function buildFixtures(g) {
   return fixtures;
 }
 
-// ─── Front arch ─────────────────────────────────────────────────────────────
-// Printed cladding around the front truss goalpost, styled after the OPF entrance
-// arch: teal with white swooshes, light checker patches, stars and dark corner
-// wedges. The print is drawn in world metres across the whole arch face, so it
-// runs on from the pillars into the header.
+// ─── Header cladding ("arch") ───────────────────────────────────────────────
+// Printed cladding on the top truss, styled after the OPF entrance arch: teal with
+// white swooshes, light checker patches, stars and dark corner wedges. The print
+// is drawn in world metres across each face, so on the front it runs on from the
+// (optional) pillars into the header.
 const PPM = 150; // print resolution, pixels per metre
 
 function drawArchPrint(ctx, xMax, yTop) {
@@ -188,22 +192,40 @@ function buildArch(g) {
   const T = S.truss;
   const xMax = L.archHalfWidth;
   const yTop = T.top;
+  const hb = L.archHeaderBottom, hh = A.headerHeight, hd = A.headerDepth, yc = hb + hh / 2;
+  const zf = L.trussFrontZ, zb = L.trussBackZ;
   const plain = toon(P.teal);
-  const printed = (x0, y0, w, h) => toon(P.white, { map: archFace(x0, y0, w, h, xMax, yTop) });
+  // Print for a face spanning x0..x0+w (its own centre at 0 when half = w / 2)
+  const printed = (x0, y0, w, h, half = xMax) => toon(P.white, { map: archFace(x0, y0, w, h, half, yTop) });
   // BoxGeometry faces: +x, -x, +y, -y, +z (front), -z (back)
-  const pillarH = L.archHeaderBottom;
-  for (const side of [-1, 1]) {
-    const x = side * L.trussLegX;
-    const front = printed(x - A.pillarWidth / 2, 0, A.pillarWidth, pillarH);
-    const pillar = box(A.pillarWidth, pillarH, A.pillarDepth, [plain, plain, plain, plain, front, plain]);
-    pillar.position.set(x, pillarH / 2, L.trussFrontZ);
-    g.add(pillar);
+  if (A.pillars) {
+    for (const side of [-1, 1]) {
+      const x = side * L.trussLegX;
+      const front = printed(x - A.pillarWidth / 2, 0, A.pillarWidth, hb);
+      const pillar = box(A.pillarWidth, hb, A.pillarDepth, [plain, plain, plain, plain, front, plain]);
+      pillar.position.set(x, hb / 2, zf);
+      g.add(pillar);
+    }
   }
   const hw = 2 * xMax;
-  const front = printed(-xMax, L.archHeaderBottom, hw, A.headerHeight);
-  const header = box(hw, A.headerHeight, A.headerDepth, [plain, plain, plain, plain, front, plain]);
-  header.position.set(0, L.archHeaderBottom + A.headerHeight / 2, L.trussFrontZ);
+  const frontPrint = printed(-xMax, hb, hw, hh);
+  const header = box(hw, hh, hd, [plain, plain, plain, plain, frontPrint, A.box ? frontPrint : plain]);
+  header.position.set(0, yc, zf);
   g.add(header);
+  if (!A.box) return;
+
+  // Back beam (printed both ways: seen above the LED frame and from backstage)
+  const back = box(hw, hh, hd, [plain, plain, plain, plain, frontPrint, frontPrint]);
+  back.position.set(0, yc, zb);
+  g.add(back);
+  // Side beams between the front and back headers, printed inside and out
+  const len = zf - zb - hd;
+  const sidePrint = printed(-len / 2, hb, len, hh, len / 2);
+  for (const side of [-1, 1]) {
+    const beam = box(hd, hh, len, [sidePrint, sidePrint, plain, plain, plain, plain]);
+    beam.position.set(side * L.trussLegX, yc, (zf + zb) / 2);
+    g.add(beam);
+  }
 }
 
 export function buildStage() {

@@ -10,7 +10,8 @@ async function call(path, { method = 'GET', body } = {}) {
   });
   let data = null;
   try { data = await res.json(); } catch { /* no JSON body */ }
-  if (!res.ok) throw new Error(data?.error || `${method} ${path} failed (${res.status})`);
+  // A host without the API answers with the page itself (not JSON): treat as an error
+  if (!res.ok || data === null) throw new Error(data?.error || `${method} ${path} failed (${res.status})`);
   return data;
 }
 

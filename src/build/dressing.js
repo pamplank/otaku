@@ -242,17 +242,29 @@ function neon(g, glows) {
     m.visible = false;
     g.add(m);
     glows.push(m);
+    return m;
   };
   const t = 0.06;
   if (S.arch.enabled) {
     const A = S.arch, xo = L.archHalfWidth;
-    const zPillar = L.trussFrontZ + A.pillarDepth / 2 + 0.03;
     const zHeader = L.trussFrontZ + A.headerDepth / 2 + 0.03;
-    strip(2 * xo, t, 0, S.truss.top - t / 2, zHeader, P.pink);                                   // header top
-    strip(2 * xo - 2 * A.pillarWidth, t, 0, L.archHeaderBottom + t / 2, zHeader, P.pink);        // header underside
-    for (const side of [-1, 1]) {
-      strip(t, L.archHeaderBottom, side * (xo - t / 2), L.archHeaderBottom / 2, zPillar, P.cyan);                 // pillar outer
-      strip(t, L.archHeaderBottom, side * (xo - A.pillarWidth + t / 2), L.archHeaderBottom / 2, zPillar, P.cyan); // pillar inner
+    const inner = A.pillars ? A.pillarWidth : 0;
+    strip(2 * xo, t, 0, S.truss.top - t / 2, zHeader, P.pink);                       // header top edge
+    strip(2 * (xo - inner), t, 0, L.archHeaderBottom + t / 2, zHeader, P.cyan);      // header bottom edge
+    if (A.box) {
+      // bottom edges of the side headers, outside faces
+      const len = L.trussFrontZ - L.trussBackZ;
+      for (const side of [-1, 1]) {
+        const m = strip(t, t, side * (L.trussLegX + A.headerDepth / 2 + 0.03), L.archHeaderBottom + t / 2, (L.trussFrontZ + L.trussBackZ) / 2, P.cyan);
+        m.scale.z = len / 0.04;
+      }
+    }
+    if (A.pillars) {
+      const zPillar = L.trussFrontZ + A.pillarDepth / 2 + 0.03;
+      for (const side of [-1, 1]) {
+        strip(t, L.archHeaderBottom, side * (xo - t / 2), L.archHeaderBottom / 2, zPillar, P.cyan);                 // pillar outer
+        strip(t, L.archHeaderBottom, side * (xo - A.pillarWidth + t / 2), L.archHeaderBottom / 2, zPillar, P.cyan); // pillar inner
+      }
     }
   }
   strip(S.deck.width, 0.05, 0, S.deck.height - 0.025, 0.03, P.yellow, 2.5); // deck front edge
