@@ -130,6 +130,23 @@ export function starSticker(size, color, { depth = 0.05, offset = 0.07 } = {}) {
   return g;
 }
 
+// 4-point sparkle drawn on a canvas (centre x, y; radius r).
+export function drawSparkle(ctx, x, y, r, fill, stroke = P.dark, lineWidth = r * 0.12) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + r);
+  ctx.quadraticCurveTo(x + r * 0.12, y + r * 0.12, x + r, y);
+  ctx.quadraticCurveTo(x + r * 0.12, y - r * 0.12, x, y - r);
+  ctx.quadraticCurveTo(x - r * 0.12, y - r * 0.12, x - r, y);
+  ctx.quadraticCurveTo(x - r * 0.12, y + r * 0.12, x, y + r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (stroke) {
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
+  }
+}
+
 // ─── Canvas textures ────────────────────────────────────────────────────────
 export function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas');

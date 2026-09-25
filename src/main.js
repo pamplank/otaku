@@ -11,6 +11,7 @@ import { updateLineResolution, FONT, FONT_DISPLAY, FONT_BODY } from './sticker.j
 import { slotStatus } from './slots.js';
 import { buildStage } from './build/stage.js';
 import { buildHall } from './build/hall.js';
+import { buildDressing } from './build/dressing.js';
 import { buildPeople } from './build/people.js';
 import { buildLighting } from './lighting.js';
 import { buildLabels } from './labels.js';
@@ -40,10 +41,11 @@ async function init() {
   const hall = buildHall();
   const people = buildPeople();
   const labels = buildLabels();
-  scene.add(stage.group, hall.group, people, labels.group);
+  const dressing = buildDressing();
+  scene.add(stage.group, hall.group, dressing.group, people, labels.group);
 
   const lighting = buildLighting(scene, {
-    fixtures: stage.fixtures, glows: stage.glows,
+    fixtures: stage.fixtures, glows: [...stage.glows, ...dressing.glows],
     glassMats: hall.glassMats, shellLines: hall.shellLines,
   });
 
@@ -85,7 +87,7 @@ async function init() {
     }
   };
   const decals = [];
-  hall.group.traverse((o) => { if (o.userData.decal) decals.push(o); });
+  for (const grp of [hall.group, dressing.group]) grp.traverse((o) => { if (o.userData.decal) decals.push(o); });
 
   const setToggle = (name, value) => {
     state[name] = value;

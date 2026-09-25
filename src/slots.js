@@ -356,6 +356,24 @@ export function makeCutoutSlot(key, { width, maxHeight, thickness, border, board
   return { group, ready };
 }
 
+// A standalone die-cut board (no artwork slot): the outline of `source` plus a
+// border, `width` metres wide, facing +z and centred on its origin.
+export function dieCutBoard(source, width, { thickness = 0.05, border = 0.05, board = P.white, edge = '#e3e1de' } = {}) {
+  const cut = dieCut(source, { border: border / width, board });
+  const geo = new THREE.ExtrudeGeometry(cut.shapes, { depth: thickness, bevelEnabled: false });
+  splitCaps(geo);
+  geo.translate(-0.5, -0.5, -thickness / 2);
+  const tex = new THREE.CanvasTexture(cut.canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  const mesh = new THREE.Mesh(geo, [new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshToonMaterial({ color: edge }),
+    new THREE.MeshToonMaterial({ color: board })]);
+  mesh.scale.set(width, width / cut.aspect, 1);
+  mesh.castShadow = true;
+  outline(mesh, OUTLINE, 40);
+  return mesh;
+}
+
 // ExtrudeGeometry gives each shape a caps group (back cap first, then front)
 // and a sides group. Split the caps so the front shows the artwork and the back
 // is plain board: material 0 = front, 1 = sides, 2 = back.

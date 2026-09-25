@@ -19,6 +19,8 @@ export const palette = {
   pink: '#FF66AD',
   cyan: '#00CAD8',
   white: '#FFFFFF',
+  teal: '#1FC3CC',      // printed arch / wraps (the OPF entrance arch teal)
+  tealLight: '#63DCE3', // checker patches on the teal prints
 };
 
 // ─── THE STAGE (front elevation) ────────────────────────────────────────────
@@ -100,6 +102,33 @@ export const stage = {
     { color: 'pink',   size: 0.42, x: 2.1,   y: 5.72, z: 0.35 }, // above the frame, right
     { color: 'cyan',   size: 0.62, x: 2.55,  y: 1.5, z: 0.3 },   // LED bottom-right
   ],
+};
+
+// ─── STAGE DRESSING (printed wraps, sparkles, floor graphics, night neon) ────
+// Styled after the OPF 2027 deck. Set any part to enabled: false to remove it.
+export const dressing = {
+  // Printed banner along the front of the barricade
+  barricade: {
+    enabled: true,
+    tagline: 'JUNE 5 & 6 2027 · OKADA MANILA',
+    logoEvery: 4,        // metres between repeated logos
+  },
+  // Sticker-card wraps on the fronts of the PA stacks (bottom box, top box)
+  paWraps: { enabled: true, labels: ['2027', 'OPF'] },
+  // Die-cut sparkles hanging from the side trusses + a comic speech bubble
+  sparkles: {
+    enabled: true,
+    // [x, y, z, size, colour] (centre, metres)
+    stars: [
+      [-4.3, 4.3, -1.4, 1.0, 'yellow'], [-3.9, 4.75, -3.6, 0.7, 'pink'], [4.35, 4.45, -1.6, 0.85, 'teal'],
+      [3.95, 4.85, -3.8, 0.6, 'yellow'], [-3.2, 4.85, -2.4, 0.45, 'white'], [3.2, 4.75, -2.7, 0.5, 'pink'],
+    ],
+    bubble: { text: 'LET’S GO!!', x: 4.3, y: 3.9, z: 0.9, width: 1.9 },
+  },
+  // Floor graphics: pink/white checker pit, "01 · stage" badge + arrows in the pocket
+  floor: { enabled: true, badge: '01', title: 'THE STICKER STAGE', width: 12, depth: 4.5 },
+  // Night only: glowing strips on the arch and the deck's front edge
+  neon: { enabled: true },
 };
 
 // ─── PLACEMENT IN THE HALL (plan view) ──────────────────────────────────────

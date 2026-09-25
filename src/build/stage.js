@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { stage as S, palette as P } from '../../stage.config.js';
 import { L } from '../layout.js';
-import { toon, flat, box, outline, stickerPanel, starSticker, canvasTexture, OUTLINE } from '../sticker.js';
+import { toon, flat, box, outline, stickerPanel, starSticker, canvasTexture, drawSparkle, OUTLINE } from '../sticker.js';
 import { makeSlot, makeCutoutSlot, placeholders } from '../slots.js';
 
 const TRUSS_COLOR = '#c9ced3';
@@ -119,17 +119,15 @@ function buildFixtures(g) {
 // arch: teal with white swooshes, light checker patches, stars and dark corner
 // wedges. The print is drawn in world metres across the whole arch face, so it
 // runs on from the pillars into the header.
-const ARCH_TEAL = '#1fc3cc';
-const ARCH_CHECK = '#63dce3';
 const PPM = 150; // print resolution, pixels per metre
 
 function drawArchPrint(ctx, xMax, yTop) {
-  ctx.fillStyle = ARCH_TEAL;
+  ctx.fillStyle = P.teal;
   ctx.fillRect(-xMax, 0, 2 * xMax, yTop);
 
   // Checker patches: lower pillars and the header ends
   const sq = 0.22;
-  ctx.fillStyle = ARCH_CHECK;
+  ctx.fillStyle = P.tealLight;
   for (let y = 0; y < yTop; y += sq) {
     for (let x = -xMax; x < xMax; x += sq) {
       if ((Math.round(x / sq) + Math.round(y / sq)) % 2) continue;
@@ -174,19 +172,7 @@ function drawArchPrint(ctx, xMax, yTop) {
     [xMax - 0.3, 3.6, 0.09, P.white], [xMax - 0.6, 3.1, 0.07, P.yellow], [xMax - 0.35, 1.6, 0.06, P.pink],
     [-3.2, 5.45, 0.07, P.white], [3.4, 5.5, 0.07, P.white], [-1.6, 5.35, 0.05, P.pink], [1.9, 5.35, 0.05, P.yellow],
   ];
-  ctx.lineWidth = 0.012;
-  ctx.strokeStyle = P.dark;
-  for (const [x, y, r, c] of stars) {
-    ctx.fillStyle = c;
-    ctx.beginPath();
-    ctx.moveTo(x, y + r);
-    ctx.quadraticCurveTo(x + r * 0.12, y + r * 0.12, x + r, y);
-    ctx.quadraticCurveTo(x + r * 0.12, y - r * 0.12, x, y - r);
-    ctx.quadraticCurveTo(x - r * 0.12, y - r * 0.12, x - r, y);
-    ctx.quadraticCurveTo(x - r * 0.12, y + r * 0.12, x, y + r);
-    ctx.fill();
-    ctx.stroke();
-  }
+  for (const [x, y, r, c] of stars) drawSparkle(ctx, x, y, r, c, P.dark, 0.012);
 }
 
 // Texture for the face of the arch covering x0..x0+w, y0..y0+h (world metres).
@@ -202,7 +188,7 @@ function buildArch(g) {
   const T = S.truss;
   const xMax = L.archHalfWidth;
   const yTop = T.top;
-  const plain = toon(ARCH_TEAL);
+  const plain = toon(P.teal);
   const printed = (x0, y0, w, h) => toon(P.white, { map: archFace(x0, y0, w, h, xMax, yTop) });
   // BoxGeometry faces: +x, -x, +y, -y, +z (front), -z (back)
   const pillarH = L.archHeaderBottom;
