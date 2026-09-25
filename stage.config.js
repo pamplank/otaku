@@ -49,6 +49,9 @@ export const stage = {
     thickness: 0.06,  // board thickness
     border: 0.08,     // board border around the artwork
     board: 'white',   // board colour (palette name), shows around and between the letters
+    // Default placement for everyone, e.g. { x: 1.8, y: 5.5, z: 3, scale: 1.5 } (centre, metres).
+    // null = on the arch header. Copy the numbers shown under "Move" in the Artwork panel.
+    position: null,
   },
 
   // Front arch: the front truss goalpost clad as a printed teal arch, styled after

@@ -222,6 +222,39 @@ button:focus-visible, .check input:focus-visible { outline: 3px solid var(--cyan
 .art-reset[hidden] { display: none; }
 .art-upload:focus-within { outline: 3px solid var(--cyan); outline-offset: 2px; }
 
+/* Logo sign: move controls (in its artwork row) and the move-mode hint */
+.art-move { padding: 0 10px 10px; border-top: 1.5px dashed #cfcac6; margin: 0 0 0; }
+.art-move .art-btns { margin-top: 9px; }
+.art-move-btn, .art-move-reset {
+  display: inline-flex; align-items: center; min-height: 28px; padding: 3px 13px; border-radius: 999px;
+  border: 1.5px solid var(--dark); box-shadow: 2px 2px 0 var(--dark);
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.art-move-btn { background: var(--cyan); }
+.art-move-btn[aria-pressed='true'] { background: var(--dark); color: var(--cyan); }
+.art-move-reset { background: var(--white); }
+.art-move-reset[hidden] { display: none; }
+.art-slider {
+  display: grid; grid-template-columns: 96px 1fr 52px; align-items: center; gap: 8px;
+  margin-top: 8px; font-size: 11px; font-weight: 700;
+}
+.art-slider input { width: 100%; accent-color: var(--pink); margin: 0; }
+.art-slider output { font-size: 10.5px; font-weight: 700; text-align: right; color: #4a454b; }
+.art-pos { margin: 8px 0 0; font-size: 10.5px; font-weight: 700; color: var(--dark); font-variant-numeric: tabular-nums; }
+.art-pos-note { margin: 4px 0 0; font-size: 10px; font-weight: 500; line-height: 1.4; color: #6b666c; }
+.art-pos-note code { font-size: 9.5px; background: #f1efec; padding: 0 3px; border-radius: 3px; }
+.move-hint {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px;
+  background: var(--dark); color: var(--white); border: var(--line) solid var(--dark); border-radius: 999px;
+  box-shadow: 4px 4px 0 var(--cyan); font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.move-hint[hidden] { display: none; }
+.move-hint button {
+  padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--white); background: var(--cyan); color: var(--dark);
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em;
+}
+
 /* ─── Small screens ─── */
 @media (max-width: 720px) {
   .title-card { padding: 10px 12px; max-width: calc(100vw - 190px); }
@@ -242,5 +275,7 @@ button:focus-visible, .check input:focus-visible { outline: 3px solid var(--cyan
   .btn-art { padding: 6px 12px; font-size: 11px; margin-top: 8px; }
   .left-col { top: 12px; left: 12px; right: 12px; bottom: 150px; gap: 10px; }
   .art-panel { width: 100%; }
+  .move-hint { top: auto; bottom: 150px; font-size: 11px; }
+  .move-hint span { white-space: normal; }
   .hotspot.open .hs-title { display: inline; }
 }

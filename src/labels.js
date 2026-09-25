@@ -48,6 +48,7 @@ export function buildLabels() {
   const group = new THREE.Group();
   group.name = 'labels';
   const all = [];
+  const byId = {};
   hotspotDefs().forEach((d, i) => {
     const el = document.createElement('div');
     el.className = `hotspot hs-c${i % 3}`; // header strip colour: cyan / pink / yellow
@@ -70,7 +71,8 @@ export function buildLabels() {
     const obj = new CSS2DObject(el);
     obj.position.set(...d.pos);
     group.add(obj);
+    byId[d.id] = obj;
   });
   const closeAll = () => all.forEach((o) => o.classList.remove('open'));
-  return { group, closeAll };
+  return { group, closeAll, byId };
 }

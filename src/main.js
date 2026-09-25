@@ -16,6 +16,7 @@ import { buildLighting } from './lighting.js';
 import { buildLabels } from './labels.js';
 import { createCameraRig } from './cameras.js';
 import { buildArtworkPanel } from './artwork.js';
+import { setupLogoMove } from './logoMove.js';
 
 async function init() {
   try {
@@ -240,7 +241,8 @@ async function init() {
   const updateBadge = () => {
     document.getElementById('artBadge').hidden = !Object.values(slotStatus).includes('placeholder');
   };
-  buildArtworkPanel({ canvas, camera, onChange: updateBadge });
+  const artPanel = buildArtworkPanel({ canvas, camera, onChange: updateBadge });
+  setupLogoMove({ canvas, camera, controls, sign: stage.logoSign, row: artPanel.rows.logo.el, label: labels.byId.logo });
   Promise.allSettled(stage.slots.map((s) => s.ready)).then(() => setTimeout(updateBadge, 300));
 
   // Hook for batch renders (used to produce the deck PNGs)

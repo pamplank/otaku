@@ -293,13 +293,30 @@ export function buildStage() {
 
   // OPF logo: die-cut sign sitting on the front arch's header
   const LG = S.logo;
+  // The sign can be moved in the viewer (see logoMove.js): `pose` overrides the
+  // default placement, which follows the artwork's height.
+  const logoSign = { group: null, height: LG.maxHeight, pose: null, onMove: null };
+  logoSign.defaults = () => ({
+    x: 0, z: L.logoZ, scale: 1,
+    y: Math.min(S.truss.top - LG.drop + logoSign.height / 2, S.ceiling.height - 0.15 - logoSign.height / 2),
+    ...LG.position,
+  });
+  logoSign.apply = () => {
+    const p = { ...logoSign.defaults(), ...logoSign.pose };
+    logoSign.group.position.set(p.x, p.y, p.z);
+    logoSign.group.scale.setScalar(p.scale);
+    logoSign.onMove?.(p);
+  };
   const logoSlot = makeCutoutSlot('logo', {
     width: LG.width, maxHeight: LG.maxHeight, thickness: LG.thickness, border: LG.border,
     boardColor: P[LG.board], edgeColor: new THREE.Color(P[LG.board]).multiplyScalar(0.82), placeholder: placeholders.logo,
-    // Bottom edge hangs `drop` below the header top; the top stays clear of the ceiling.
-    onBuild: (sign, w, h) => { sign.position.y = Math.min(S.truss.top - LG.drop + h / 2, S.ceiling.height - 0.15 - h / 2); },
+    // By default the bottom edge hangs `drop` below the header top, clear of the ceiling.
+    onBuild: (sign, w, h) => {
+      logoSign.group = sign;
+      logoSign.height = h;
+      logoSign.apply();
+    },
   });
-  logoSlot.group.position.z = L.logoZ;
   g.add(logoSlot.group);
 
   // Wings (cyan left, yellow right) with KV/sponsor print slots
@@ -364,5 +381,6 @@ export function buildStage() {
     fixtures,
     glows,
     slots: [ledSlot, logoSlot],
+    logoSign,
   };
 }

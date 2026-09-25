@@ -149,5 +149,5 @@ export function buildArtworkPanel({ canvas, camera, onChange }) {
     if (key) rows[key].input.click();
   });
 
-  return { setOpen };
+  return { setOpen, rows };
 }
