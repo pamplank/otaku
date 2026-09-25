@@ -8,6 +8,7 @@ export const config = { matcher: '/((?!_vercel).*)' };
 const COOKIE = 'opf_viewer';
 
 async function tokenFor(code) {
+  // Salt kept from the project's earlier name so existing unlock cookies stay valid.
   const data = new TextEncoder().encode(`opf27-sticker-stage:${code}`);
   const hash = await crypto.subtle.digest('SHA-256', data);
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -25,7 +26,7 @@ function readCookie(request, name) {
 function page(error = false) {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
-<title>OPF 2027 · The Sticker Stage</title>
+<title>OPF 2027 · The Main Stage</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,900&family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box}
@@ -43,7 +44,7 @@ function page(error = false) {
 </style></head><body>
 <form method="POST" action="/__unlock">
   <p class="e">Otaku Pop Fes 2027 · Okada Manila</p>
-  <h1>The Sticker Stage</h1>
+  <h1>The Main Stage</h1>
   <label for="code">Passcode</label>
   <input id="code" name="code" type="password" autocomplete="current-password" required autofocus>
   ${error ? '<p class="err" role="alert">That passcode didn’t match. Try again.</p>' : ''}

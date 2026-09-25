@@ -1,4 +1,4 @@
-// The Sticker Stage: deck, LED, sticker-card frame, logo sign, wings, stars, truss, PA.
+// The Main Stage: deck, LED, sticker-card frame, logo sign, wings, stars, truss, PA.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { stage as S, palette as P } from '../../stage.config.js';

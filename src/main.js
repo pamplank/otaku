@@ -187,7 +187,7 @@ async function init() {
 
   // Caption card in the deck's style: rounded white card, dark outline, hard dark shadow.
   function drawCaption(ctx, viewName) {
-    const text = `OTAKU POP FES 2027 · THE STICKER STAGE · ${viewName.toUpperCase()}`;
+    const text = `OTAKU POP FES 2027 · THE MAIN STAGE · ${viewName.toUpperCase()}`;
     const sub = 'Concept only · all sizes TBC pending site survey' +
       (Object.values(slotStatus).includes('placeholder') ? ' · placeholder artwork' : '');
     const head = () => { ctx.font = `900 24px ${FONT_DISPLAY}`; ctx.fontStretch = 'expanded'; };
@@ -217,7 +217,7 @@ async function init() {
   }
 
   const viewLabel = () => rig.presets[rig.current]?.label || 'Custom view';
-  const fileName = (label) => `OPF27_StickerStage_${label.replace(/[^\w]+/g, '-')}_${state.night ? 'night' : 'day'}_1920x1080.png`;
+  const fileName = (label) => `OPF27_MainStage_${label.replace(/[^\w]+/g, '-')}_${state.night ? 'night' : 'day'}_1920x1080.png`;
 
   document.getElementById('exportBtn').addEventListener('click', () => {
     const label = viewLabel();

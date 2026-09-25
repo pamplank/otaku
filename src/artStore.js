@@ -2,7 +2,7 @@
 // survives a reload. It never leaves the device: for everyone to see a file,
 // it still has to go in /public/assets. Every call fails soft (private
 // windows, blocked storage): the viewer then just forgets on reload.
-const DB = 'opf27-sticker-stage';
+const DB = 'opf27-sticker-stage'; // earlier project name, kept so saved uploads survive
 const STORE = 'artwork';
 
 let dbPromise;

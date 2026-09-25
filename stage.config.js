@@ -1,5 +1,5 @@
 // ============================================================================
-//  OTAKU POP FES 2027 · THE STICKER STAGE · Crystal Pavilion, Okada Manila
+//  OTAKU POP FES 2027 · THE MAIN STAGE · Crystal Pavilion, Okada Manila
 //  ---------------------------------------------------------------------------
 //  EVERY DIMENSION LIVES IN THIS FILE.  Units: metres.
 //  ALL SIZES ARE TBC UNTIL THE SITE SURVEY. Change a number, save, reload.
@@ -126,7 +126,7 @@ export const dressing = {
     bubble: { text: 'LET’S GO!!', x: 4.3, y: 3.9, z: 0.9, width: 1.9 },
   },
   // Floor graphics: pink/white checker pit, "01 · stage" badge + arrows in the pocket
-  floor: { enabled: true, badge: '01', title: 'THE STICKER STAGE', width: 12, depth: 4.5 },
+  floor: { enabled: true, badge: '01', title: 'THE MAIN STAGE', width: 12, depth: 4.5 },
   // Night only: glowing strips on the arch and the deck's front edge
   neon: { enabled: true },
 };
