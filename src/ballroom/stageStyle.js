@@ -111,17 +111,34 @@ export function headerBox({ top, size, span, zs, height, depth, theme }) {
 }
 
 // Die-cut OPF logo sign on the header's front (supplied logo file, shown whole).
-// Its bottom edge hangs `drop` below the header top, like the main stage's.
-export function logoSign(key, { width, maxHeight, headerTop, drop, z, thickness = 0.06, border = 0.08, board = 'white', ceiling = Infinity }) {
+// Its bottom edge hangs `drop` below the header top, like the main stage's. Returns
+// { group, ready, sign }: `sign` can be moved in admin mode (logoMove.js), exactly
+// like the main stage's — `pose` overrides the default placement, in the stage's
+// local coordinates, and is kept in the build's shared state.
+export function logoSign(key, { width, maxHeight, headerTop, drop, z, thickness = 0.06, border = 0.08, board = 'white',
+  ceiling = Infinity, labelId = 'logo', limits = {} }) {
   const boardColor = col(board);
-  return makeCutoutSlot(key, {
+  const sign = { key, labelId, group: null, height: maxHeight, pose: null, listeners: [],
+    limits: { ceiling, xLimit: 10, zRange: [-6, 8], ...limits } };
+  sign.defaults = () => ({ x: 0, y: Math.min(headerTop - drop + sign.height / 2, ceiling - 0.15 - sign.height / 2), z, scale: 1 });
+  sign.apply = () => {
+    if (!sign.group) return;
+    const p = { ...sign.defaults(), ...sign.pose };
+    sign.group.position.set(p.x, p.y, p.z);
+    sign.group.scale.setScalar(p.scale);
+    for (const fn of sign.listeners) fn(p);
+  };
+  const slot = makeCutoutSlot(key, {
     width, maxHeight, thickness, border, boardColor,
     edgeColor: new THREE.Color(boardColor).multiplyScalar(0.82), placeholder: placeholders.logo,
     assets: MAIN_ASSETS.logo,
-    onBuild: (sign, w, h) => {
-      sign.position.set(0, Math.min(headerTop - drop + h / 2, ceiling - 0.15 - h / 2), z);
+    onBuild: (group, w, h) => {
+      sign.group = group;
+      sign.height = h;
+      sign.apply();
     },
   });
+  return { ...slot, sign };
 }
 
 // Die-cut sparkles hanging on cables from the truss: [[x, y, z, size, colour], …]

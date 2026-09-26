@@ -244,7 +244,8 @@ export function buildPanelZone({ origin = new THREE.Vector3(), seed = 480 } = {}
   const LG = S.logo;
   const logoZ = hbox.frontZ + LG.standoff + LG.thickness / 2;
   const logo = logoSign('panelLogo', { width: LG.width, maxHeight: LG.maxHeight, headerTop: T.top, drop: LG.drop, z: logoZ,
-    thickness: LG.thickness, border: LG.border, board: LG.board, ceiling: ROOM.ceiling });
+    thickness: LG.thickness, border: LG.border, board: LG.board, ceiling: ROOM.ceiling,
+    labelId: 'logo', limits: { xLimit: 11, zRange: [-5, 6] } });
   g.add(logo.group);
   slotsReady.push(logo.ready);
 
@@ -470,7 +471,7 @@ export function buildPanelZone({ origin = new THREE.Vector3(), seed = 480 } = {}
   ];
 
   return {
-    group: g, people, labels, fixtures: fx, glows, slotsReady, counts, setLounge,
+    group: g, people, labels, fixtures: fx, glows, slotsReady, counts, setLounge, logoSign: logo.sign,
     world: (x, y, z) => [x + origin.x, y + origin.y, z + origin.z],
     ledCentre: new THREE.Vector3(0, L.bottom + L.height / 2, ledZ).add(origin),
     rowZ, fohZ, lastRow,

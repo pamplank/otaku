@@ -79,6 +79,8 @@ export default {
         onNight: room.setNight,
       },
       slotsReady: [...zone.slotsReady, ...mini.slotsReady, ...arch.slotsReady],
+      logoSign: zone.logoSign,                  // movable in admin mode, like the main stage's
+      otherLogos: { mini: mini.logoSign },       // follows where the mini stage's logo was moved
       visibility(state, { plan }) {
         room.ceiling.visible = state.ceiling && !plan;
         room.foyerCeiling.visible = !plan;

@@ -85,6 +85,7 @@ export default {
         onNight: (on) => { room.setNight(on); wash.intensity = on ? 4 : 0; },
       },
       slotsReady: [...zone.slotsReady, ...panel.slotsReady, ...mini.slotsReady],
+      otherLogos: { panel: panel.logoSign, mini: mini.logoSign },
       visibility(state, { plan }) {
         room.ceiling.visible = !plan;
         room.foyerCeiling.visible = state.foyerCeiling && !plan;

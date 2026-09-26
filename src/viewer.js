@@ -284,6 +284,9 @@ export async function startViewer(build) {
       if (st && st.updatedAt !== others[a.id]) {
         others[a.id] = st.updatedAt;
         applyKeys(st, a.keys);
+        // a stage shown here whose logo was moved on its own page
+        const other = built.otherLogos?.[a.id];
+        if (other) { other.pose = st.logoPose ?? null; other.apply(); }
       }
     }
   };
@@ -296,7 +299,7 @@ export async function startViewer(build) {
       built.logoSign.apply();
     }
   };
-  if (built.logoSign) attachLogoLabel(built.logoSign, labels.byId.logo);
+  if (built.logoSign) attachLogoLabel(built.logoSign, labels.byId[built.logoSign.labelId ?? 'logo']);
   (async () => {
     const [state, status] = await Promise.all([fetchState(), adminStatus()]);
     applyShared(state);
@@ -306,7 +309,7 @@ export async function startViewer(build) {
       document.getElementById('artBtn').hidden = false;
       const artPanel = buildArtworkPanel({ canvas, camera, getState: () => shared, setState: setShared, info: build.artwork });
       if (built.logoSign) {
-        logoMove = setupLogoMove({ canvas, camera, controls, sign: built.logoSign, row: artPanel.rows.logo.el, setState: setShared });
+        logoMove = setupLogoMove({ canvas, camera, controls, sign: built.logoSign, row: artPanel.rows[built.logoSign.key ?? 'logo'].el, setState: setShared });
       }
     }
     // Pick up other people's changes while the page is open
