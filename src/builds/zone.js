@@ -1,37 +1,36 @@
 // IP BOOTH ZONE · Crystal Pavilion (config: config/zone.config.js; booths from
 // config/booths.config.js; the main stage from stage.config.js, unchanged).
+// Layout after the RFP venue plan (pp. 34 / 36).
 import * as THREE from 'three';
 import { buildStage } from '../build/stage.js';
 import { buildDressing } from '../build/dressing.js';
 import { buildPeople } from '../build/people.js';
 import { buildLabels } from '../labels.js';
 import { MAIN_ARTWORK } from '../artwork.js';
-import { grid as GR, arc as ARC } from '../../config/zone.config.js';
-import { buildZone, gridLayout, ZONE_ARTWORK, fountainCentre, polar } from '../booths/zone.js';
+import { zones as ZN } from '../../config/zone.config.js';
+import { buildZone, boothLayout, at, lakeCentre, ZONE_ARTWORK } from '../booths/zone.js';
 import { BOOTH_A_ARTWORK } from '../booths/planA.js';
 import { BOOTH_B_ARTWORK } from '../booths/planB.js';
 import { BOOTH_C_ARTWORK } from '../booths/planC.js';
 
+const ipZone = ZN.find((z) => z.id === 'ip');
+const xyz = (p, y) => [p.x, y, p.z];
+
 function presets() {
-  const F = fountainCentre();
-  const [gx, gz] = polar(GR.angle, GR.radius, F);
-  const rot = -(GR.angle * Math.PI) / 180;
-  // grid-local → world
-  const w = (x, y, z) => {
-    const v = new THREE.Vector3(x, y, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), rot);
-    return [v.x + gx, y, v.z + gz];
-  };
-  const G = gridLayout();
-  const gw = G.width, gd = G.depth;
-  const aisle = G.aisles[1];
-  const az = (aisle[1] + aisle[3]) / 2;
-  const [cx, cz] = [(polar(ARC.zones[0].from, ARC.outer, F)[0] + polar(ARC.zones.at(-1).to, ARC.outer, F)[0]) / 2, F.y - ARC.outer * 0.3];
+  const LY = boothLayout();
+  const aisleD = (LY.aisle.from + LY.aisle.to) / 2;
+  const tm = ipZone.from + (ipZone.to - ipZone.from) * 0.55;
+  const mid = at(tm, 0);
+  const above = at(tm - 6, 55);                         // over the promenade, looking back at the IP zone
+  const eye0 = at(ipZone.to - 1, aisleD), eye1 = at(ipZone.to - 14, aisleD);
+  const L = lakeCentre();
+  const ipC = at((ipZone.from + ipZone.to) / 2 + 4, -2);
   return {
-    ipAerial: { label: 'IP zone aerial', pos: w(gw * 0.55, 30, gd * 0.5 + 30), target: w(0, 0, 1), fov: 42 },
-    aisle: { label: 'Aisle eye level', pos: w(-gw / 2 + 1.6, 1.6, az), target: w(gw / 2, 1.3, az + 0.4), fov: 58 },
-    overview: { label: 'Zoning arc', pos: [cx, 120, F.y + 78], target: [cx, 0, F.y - 22], fov: 46 },
-    plan: { label: 'Top-down plan', pos: [cx, 600, cz + 0.01], target: [cx, 0, cz], fov: 12.6, plan: true },
-    ipPlan: { label: 'IP zone plan', pos: [gx, 300, gz + 0.01], target: [gx, 0, gz], fov: (2 * Math.atan((Math.max(gw, gd) * 0.62) / 300) * 180) / Math.PI, plan: true },
+    ipAerial: { label: 'IP zone aerial', pos: xyz(above, 38), target: xyz(mid, 0), fov: 44 },
+    aisle: { label: 'Aisle eye level', pos: xyz(eye0, 1.6), target: xyz(eye1, 1.4), fov: 58 },
+    overview: { label: 'Zoning arc', pos: [L.x + 6, 140, L.z + 104], target: [L.x + 6, 0, L.z - 40], fov: 50 },
+    plan: { label: 'Top-down plan', pos: [L.x, 600, L.z - 36 + 0.01], target: [L.x, 0, L.z - 36], fov: 16, plan: true },
+    ipPlan: { label: 'IP zone plan', pos: [ipC.x, 300, ipC.z + 0.01], target: [ipC.x, 0, ipC.z], fov: 13, plan: true },
   };
 }
 
@@ -40,16 +39,17 @@ export default {
   meta: {
     eyebrow: 'Otaku Pop Fes 2027 · Crystal Pavilion',
     title: 'IP Booth Zone',
-    sub: 'Zoning arc around the Fountain · booth mix TBC · all sizes TBC',
-    ariaLabel: '3D model of the IP booth zone and the zoning arc around the Fountain',
+    sub: 'Crystal Pavilion zoning after the RFP plan · booth mix TBC · all sizes TBC',
+    ariaLabel: '3D model of the Crystal Pavilion zoning around the Fountain and the IP booth zone',
     caption: 'IP BOOTH ZONE',
     fileTag: 'IPBoothZone',
   },
-  presets: () => presets(),
+  presets,
   toggles: [
     { key: 'flow', label: 'Guest flow', on: true },
     { key: 'staffTags', label: 'Staff tags', on: false },
     { key: 'clearance', label: 'Photo clearance', on: false },
+    { key: 'facade', label: 'Pavilion facade', on: true },
   ],
   artwork: ZONE_ARTWORK,
   alsoShow: [
@@ -64,7 +64,7 @@ export default {
     const dressing = buildDressing();
     const people = new THREE.Group();
     people.add(zone.people, buildPeople());
-    const F = zone.F;
+    const L = lakeCentre();
     return {
       groups: [zone.group, stage.group, dressing.group, zone.dims],
       decalRoots: [zone.group, dressing.group],
@@ -72,8 +72,8 @@ export default {
       labels: buildLabels(zone.labels),
       lighting: {
         fixtures: stage.fixtures, glows: [...stage.glows, ...dressing.glows],
-        sun: { pos: [F.x - 60, 120, F.y + 40], target: [F.x, 0, F.y - 25], extent: 95, far: 300 },
-        onNight: (on) => { zone.wash.intensity = on ? 28 : 0; },
+        sun: { pos: [L.x - 90, 170, L.z + 40], target: [L.x, 0, L.z - 45], extent: 150, far: 420 },
+        onNight: (on) => zone.setNight(on),
       },
       slotsReady: [...zone.slotsReady, ...stage.slots.map((s) => s.ready)],
       visibility(state) {
@@ -81,6 +81,7 @@ export default {
         zone.tags.visible = state.staffTags;
         zone.dims.visible = state.labels;
         zone.setClearance(state.clearance);
+        zone.wall.visible = state.facade;
       },
     };
   },

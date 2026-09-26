@@ -112,22 +112,25 @@ Artwork slots (all "IP ARTWORK – SUPPLIED BY CYBERE" until uploaded): Plan A K
 
 ## Step 6 · IP Booth Zone (`config/zone.config.js`)
 
-No zoning drawing was supplied, so the arc is laid out from the brief ("Artist Alley, Food, Sponsors, Stage, IP Booths" around the Fountain). Everything below is assumed:
+Layout follows the RFP venue plan (OPF27 RFP pp. 34 / 36, "layout is provisional"): the Crystal Pavilion as a curved arcade on the north side of the Fountain, zoned left → right Artist Alley · Food · Sponsors · Stage · MD + IP zone, Entrance at the IP end. No floor plan exists, so shape and proportions are traced from the RFP plan. Everything below is assumed:
 
 | Item | Assumed | Config |
 |---|---|---|
-| Fountain | 28 × 12 m ellipse, 16 m beyond the hall's front edge (same as the main stage model) → centre ≈ (0.9, 39) | `fountain` |
-| Zoning arc | annular sectors 20–84 m out from the Fountain, left → right as listed | `arc.inner`, `arc.outer` |
-| Sector angles (0° = straight at the stage, + = audience right) | Artist Alley −112°…−82° · Food −82°…−57° · Sponsors −57°…−35° · Stage −35°…35° · IP Booths 35°…98° | `arc.zones` |
-| Stage zone | main stage exactly as `/main` (stage, dressing, crowd), with its viewing pocket, pit and barricade | `stage.config.js` |
+| Scale | traced plan × 0.35 m/px, chosen so the arcade is ≈ 5,700 m² as the RFP states (drawn: ≈ 5,720 m²). The RFP's "800m" arrow does not agree with 5,700 m², so area was used | `pavilion.semiX`, `pavilion.semiZ` |
+| Arcade | ≈ 260 m along the curve × 20 m wide; the Stage segment is 32 m deep so the main stage model fits unchanged | `pavilion.width` |
+| Curve | elliptical arc, semi-axes 115.5 × 63 m (centreline), from −76° to 80° | `pavilion` |
+| Zone lengths along the arcade | Artist Alley ≈ 34 m · Food ≈ 25 m · Sponsors ≈ 46 m · Stage ≈ 44 m · MD ≈ 22 m · IP zone ≈ 88 m | `zones` |
+| Stage | main stage exactly as `/main` (stage, dressing, crowd, pocket, pit, barricade), facing the Fountain | `stage.config.js` |
+| MD · merchandise | dashed area at the start of the IP zone (RFP p. 36: "considering placing the merchandise zone within the IP zone") | `zones` |
+| Outer facade | cream wall 6 m high along the back of the arcade (toggle); slim glass mullions on the Fountain side | `pavilion.wall` |
+| The Fountain | lake ≈ 188 × 80 m, proportions traced from the RFP plan. This zone view is drawn from the RFP; the main stage's small orientation fountain stays as it was | `fountain` |
 | Booth mix (placeholder) | 4 × A · 8 × B · 8 × C = 20 units, marked "MIX TBC" | `mix` |
-| Unit footprints | A 6 × 6 · B 6 × 3 · C 5 × 4 (C's area assumed in step 5) | `config/booths.config.js` |
-| Rows | 4 rows balanced by frontage (each A + 2 B + 2 C = 28 m), as 2 back-to-back double rows; the back row of each pair faces away from the Fountain | `grid.rows` |
-| Booth fronts | on the aisle; the shallower B / C units leave a void behind them in a 6 m row | `src/booths/zone.js` |
-| Aisles | 3.5 main aisles in front, between and behind the double rows, plus side aisles at both ends; 3.5 cross aisle through each row | `grid.aisle`, `grid.crossAisle` |
-| IP booth area | ≈ 38.5 × 34.5 m, centred 58 m from the Fountain at 66°, turned to face it (centre ≈ (54, 15)) | `grid.angle`, `grid.radius` |
-| Zone sign (OPF wayfinding, texture slot) | 4 × 1.2, bottom edge 2.2, on two posts over the front aisle | `zoneSign` |
-| Visitors | 90 in the booth aisles, 60 spread over Artist Alley / Food / Sponsors | `visitors` |
-| Night wash over the booth area | one soft point light 16 m up | `src/booths/zone.js` |
+| Booth rows | two rows along the curve: outer row with its fronts 6 m in from the facade (backs to the wall), 5 m central aisle, inner row facing it, 3 m walkway on the Fountain side | `ip` |
+| Row order / grouping | A B C B C … per row, 4 m cross aisle every 5 units, packed towards the Entrance ("booths planned near the entrance") | `ip.groupSize` |
+| Side gaps between booths | 0.4 outer row · 1.2 inner row (the arc pinches the inner row's backs) | `ip.gap` |
+| Clear space | 3 m after the MD area, 7 m before the Entrance | `ip.margin` |
+| Zone sign (OPF wayfinding, texture slot) | 4 × 1.2, bottom edge 2.2, over the aisle at the Entrance | `zoneSign` |
+| Visitors | 110 in the IP aisle / walkway / MD, 90 in Artist Alley / Food / Sponsors | `visitors` |
+| Night | two soft washes over the IP zone, 14 m up | `src/booths/zone.js` |
 
 Every booth in the zone is the same model as `/booths/a`, `/booths/b` and `/booths/c`, and shows the artwork published there, so each queue stays inside its footprint. Staff tags and Plan C's photo clearance are toggles, off by default at this scale.
