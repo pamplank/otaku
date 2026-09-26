@@ -4,9 +4,9 @@
 // Built in local coordinates (origin = arch centre on the floor, +z = approach
 // side) inside a group placed at `origin`.
 import * as THREE from 'three';
-import { arch as A, boards as BD, lanes as LN } from '../../config/arch.config.js';
+import { arch as A, boards as BD, lanes as LN, archPalette as K } from '../../config/arch.config.js';
 import { palette as P, assets as MAIN_ASSETS } from '../../stage.config.js';
-import { toon, box, starSticker, canvasTexture, floorArrow, outline, OUTLINE, FONT_DISPLAY, FONT_BODY } from '../sticker.js';
+import { toon, box, starSticker, canvasTexture, floorArrow, outline, drawSparkle, OUTLINE, FONT_DISPLAY, FONT_BODY } from '../sticker.js';
 import { makeSlot, customSlot, labelPlaceholder, splitCaps } from '../slots.js';
 import { crowd, figure, colorPicker, mulberry32 } from './figures.js';
 import { queueLane } from './rig.js';
@@ -67,6 +67,51 @@ function drawContain(ctx, img, x, y, w, h) {
   ctx.drawImage(img, x + (w - iw * k) / 2, y + (h - ih * k) / 2, iw * k, ih * k);
 }
 
+const kc = (c) => K[c] ?? P[c] ?? c;
+
+// ─── KV-style doodles (canvas px) ───
+function chevron(ctx, x, y, s, color, rot = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  const path = () => { ctx.beginPath(); ctx.moveTo(-s, s * 0.55); ctx.lineTo(0, -s * 0.45); ctx.lineTo(s, s * 0.55); };
+  path(); ctx.lineWidth = s * 0.62; ctx.strokeStyle = P.dark; ctx.stroke();
+  path(); ctx.lineWidth = s * 0.36; ctx.strokeStyle = color; ctx.stroke();
+  ctx.restore();
+}
+function note(ctx, x, y, s, color) {
+  ctx.save();
+  ctx.lineWidth = s * 0.12;
+  ctx.strokeStyle = P.dark;
+  ctx.fillStyle = color;
+  for (const dx of [0, s * 0.9]) {
+    ctx.beginPath(); ctx.ellipse(x + dx, y, s * 0.3, s * 0.22, -0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + dx + s * 0.27, y - s * 0.05); ctx.lineTo(x + dx + s * 0.27, y - s * 1.1); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(x + s * 0.27, y - s * 1.1); ctx.lineTo(x + s * 1.17, y - s * 1.3); ctx.lineTo(x + s * 1.17, y - s * 1.0); ctx.lineTo(x + s * 0.27, y - s * 0.8); ctx.closePath();
+  ctx.fillStyle = color; ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+// Sticker lettering: dark hard offset, dark outline, white (or given) fill
+function stickerText(ctx, text, x, y, maxW, px, fill = P.white, shadow = P.dark) {
+  fitFont(ctx, text, maxW, px, FONT_DISPLAY);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  const o = px * 0.08;
+  ctx.fillStyle = shadow;
+  ctx.strokeStyle = shadow;
+  ctx.lineWidth = px * 0.16;
+  ctx.strokeText(text, x + o, y + o);
+  ctx.fillText(text, x + o, y + o);
+  ctx.strokeStyle = P.dark;
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fill;
+  ctx.fillText(text, x, y);
+}
+
 export function buildArchZone({ origin = new THREE.Vector3(), seed = 42 } = {}) {
   const g = new THREE.Group();
   g.position.copy(origin);
@@ -83,50 +128,99 @@ export function buildArchZone({ origin = new THREE.Vector3(), seed = 42 } = {}) 
   faceTex.anisotropy = 8;
   let logoImg = null, faceImg = null;
 
+  // Default face in the OPF 2027 KV palette: hot-pink halftone, a diagonal yellow
+  // slab, a purple ribbon across the header carrying the supplied logo and the
+  // stickered title, mint "OTAKU POP FES" edge tickers, chevrons and sparkles.
   function drawDefault(ctx) {
     const px = (v) => v * PPM;
-    ctx.fillStyle = P.white;
-    ctx.fillRect(0, 0, face.width, face.height);
+    const cw = face.width, ch = face.height;
     const hb = H - O.height;                          // header band height
-    // Header: logo (supplied file, contain-fit) left, title + subtitle right
-    const lb = { x: px(0.4), y: px(0.12), w: px(3.3), h: px(hb - 0.24) };
+    ctx.fillStyle = K.kvPink;
+    ctx.fillRect(0, 0, cw, ch);
+    // Halftone dots, denser towards the right and the bottom of the legs
+    ctx.fillStyle = K.kvMagenta;
+    for (let y = 0.06, r = 0; y < H; y += 0.12, r++) for (let x = 0.06 + (r % 2) * 0.06; x < W; x += 0.12) {
+      const f = Math.max(0, Math.min(1, 0.25 + 0.55 * (x / W) + 0.3 * (y / H) - 0.25));
+      if (f < 0.12) continue;
+      ctx.beginPath(); ctx.arc(px(x), px(y), px(0.05 * f), 0, Math.PI * 2); ctx.fill();
+    }
+    // Diagonal yellow slab (as behind the KV figure) + a thin slash on the right
+    ctx.fillStyle = K.kvYellow;
+    ctx.beginPath(); ctx.moveTo(px(0.9), 0); ctx.lineTo(px(2.9), 0); ctx.lineTo(px(1.6), ch); ctx.lineTo(px(-0.4), ch); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(px(6.55), 0); ctx.lineTo(px(7.0), 0); ctx.lineTo(px(6.2), ch); ctx.lineTo(px(5.75), ch); ctx.closePath(); ctx.fill();
+    // Purple ribbon across the header, slightly tilted
+    ctx.fillStyle = K.kvPurple;
+    ctx.beginPath(); ctx.moveTo(0, px(0.26)); ctx.lineTo(cw, px(0.12)); ctx.lineTo(cw, px(hb - 0.06)); ctx.lineTo(0, px(hb + 0.06)); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = px(0.03);
+    ctx.strokeStyle = P.dark;
+    ctx.stroke();
+    // Purple kick strip at the foot of the legs
+    ctx.fillStyle = K.kvPurple;
+    ctx.fillRect(0, px(H - 0.28), cw, px(0.28));
+    ctx.fillStyle = P.dark;
+    ctx.fillRect(0, px(H - 0.28), cw, px(0.025));
+    // Mint edge tickers with "OTAKU POP FES" running up
+    const tw = 0.3;
+    for (const x0 of [0, W - tw]) {
+      ctx.fillStyle = K.kvMint;
+      ctx.fillRect(px(x0), 0, px(tw), ch);
+      ctx.fillStyle = P.dark;
+      ctx.fillRect(px(x0 === 0 ? tw - 0.02 : x0), 0, px(0.02), ch);
+      ctx.save();
+      ctx.translate(px(x0 + tw / 2), ch);
+      ctx.rotate(-Math.PI / 2);
+      ctx.font = `900 ${px(0.2)}px ${FONT_DISPLAY}`;
+      ctx.fontStretch = 'expanded';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = K.kvPink;
+      const t = `${A.ticker}  ✦  `;
+      const w = ctx.measureText(t).width;
+      for (let x = px(0.1); x < ch + w; x += w) ctx.fillText(t, x, px(0.01));
+      ctx.restore();
+    }
+    // Logo (supplied file, contain-fit) on the ribbon, left; title + subtitle right
+    const lb = { x: px(0.55), y: px(0.18), w: px(3.3), h: px(hb - 0.3) };
     if (logoImg) drawContain(ctx, logoImg, lb.x, lb.y, lb.w, lb.h);
     else {
       ctx.setLineDash([px(0.08), px(0.06)]);
       ctx.lineWidth = px(0.025);
-      ctx.strokeStyle = P.dark;
+      ctx.strokeStyle = P.white;
       ctx.strokeRect(lb.x, lb.y, lb.w, lb.h);
       ctx.setLineDash([]);
-      ctx.fillStyle = P.dark;
+      ctx.fillStyle = P.white;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       fitFont(ctx, 'OPF LOGO · SUPPLIED FILE', lb.w * 0.9, px(0.22), FONT_DISPLAY);
       ctx.fillText('OPF LOGO · SUPPLIED FILE', lb.x + lb.w / 2, lb.y + lb.h / 2);
     }
+    const tx = px(4.0 + (W - 4.0 - 0.45) / 2), tMax = px(W - 4.0 - 0.8);
+    stickerText(ctx, A.title, tx, px(0.5), tMax, px(0.56));
+    // subtitle in a yellow pill
+    ctx.font = `800 ${px(0.16)}px ${FONT_BODY}`;
+    ctx.fontStretch = 'normal';
+    const sub = A.subtitle;
+    const sw = Math.min(tMax, ctx.measureText(sub).width + px(0.4)), sh = px(0.3), sy = px(0.93);
+    ctx.fillStyle = P.dark;
+    ctx.beginPath(); ctx.roundRect(tx - sw / 2 + px(0.03), sy - sh / 2 + px(0.03), sw, sh, sh / 2); ctx.fill();
+    ctx.fillStyle = K.kvYellow;
+    ctx.beginPath(); ctx.roundRect(tx - sw / 2, sy - sh / 2, sw, sh, sh / 2); ctx.fill();
+    ctx.lineWidth = px(0.02); ctx.strokeStyle = P.dark; ctx.stroke();
     ctx.fillStyle = P.dark;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const tx = px(4.0 + (W - 4.0 - 0.35) / 2), tw = px(W - 4.0 - 0.5);
-    fitFont(ctx, A.title, tw, px(0.56), FONT_DISPLAY);
-    ctx.fillText(A.title, tx, px(0.46));
-    ctx.font = `800 ${px(0.18)}px ${FONT_BODY}`;
-    ctx.fontStretch = 'normal';
-    const sub = A.subtitle.split('').join(String.fromCharCode(8202));   // a little tracking
-    ctx.fillText(sub, tx, px(0.9), tw);
-    // Pink band under the header, dark kick strip on the legs
-    ctx.fillStyle = P.pink;
-    ctx.fillRect(0, px(hb - 0.1), face.width, px(0.1));
-    ctx.fillStyle = P.dark;
-    ctx.fillRect(0, px(H - 0.22), face.width, px(0.22));
-    // Cyan / yellow dots on the upper legs (visible around the boards)
-    for (const [cx, c] of [[legW / 2, P.cyan], [W - legW / 2, P.yellow]]) {
-      ctx.fillStyle = c;
-      for (let i = -2; i <= 2; i++) {
-        ctx.beginPath();
-        ctx.arc(px(cx + i * 0.3), px(hb + 0.2), px(0.06), 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    ctx.fillText(sub, tx, sy + px(0.01), sw - px(0.2));
+    // Sticker rim around the opening: white band + dark line
+    const ox0 = px((W - O.width) / 2), ox1 = px((W + O.width) / 2), oy = px(hb), rr = px(A.openingRadius);
+    const rim = () => { ctx.beginPath(); ctx.moveTo(ox0, ch); ctx.lineTo(ox0, oy + rr); ctx.quadraticCurveTo(ox0, oy, ox0 + rr, oy); ctx.lineTo(ox1 - rr, oy); ctx.quadraticCurveTo(ox1, oy, ox1, oy + rr); ctx.lineTo(ox1, ch); };
+    rim(); ctx.lineWidth = px(0.3); ctx.strokeStyle = P.dark; ctx.stroke();
+    rim(); ctx.lineWidth = px(0.2); ctx.strokeStyle = P.white; ctx.stroke();
+    // Chevrons, sparkle bursts and music notes (generic doodles, KV style)
+    for (const [x, y, sz, c, r] of [[0.55, 1.35, 0.14, K.kvViolet, -0.3], [1.55, 1.3, 0.1, K.kvYellow, 0.4], [6.45, 1.32, 0.12, K.kvViolet, 0.35],
+      [7.45, 1.36, 0.1, P.white, -0.4], [3.75, 0.22, 0.08, K.kvYellow, 0.2], [4.3, 1.08, 0.07, K.kvMint, -0.2]]) chevron(ctx, px(x), px(y), px(sz), c, r);
+    for (const [x, y, r, c] of [[3.9, 0.55, 0.14, K.kvYellow], [0.45, 0.62, 0.09, P.white], [7.55, 0.55, 0.1, K.kvYellow], [5.6, 1.1, 0.06, P.white],
+      [2.1, 3.98, 0.08, K.kvYellow], [5.9, 3.95, 0.09, P.white], [1.9, 1.33, 0.07, P.white]]) drawSparkle(ctx, px(x), px(y), px(r), c, P.dark, px(0.012));
+    note(ctx, px(6.7), px(4.0), px(0.13), K.kvYellow);
+    note(ctx, px(0.75), px(4.0), px(0.11), P.white);
   }
 
   function redraw() {
@@ -139,35 +233,73 @@ export function buildArchZone({ origin = new THREE.Vector3(), seed = 42 } = {}) 
     faceTex.needsUpdate = true;
   }
 
-  // Back face (door side): white with the title, drawn mirrored so it reads correctly
+  // Back face (door side): pink + purple ribbon with the title, drawn mirrored so it reads correctly
   const backTex = canvasTexture(face.width, face.height, (ctx, cw, ch) => {
-    ctx.fillStyle = P.white;
+    const hb = (H - O.height) * PPM;
+    ctx.fillStyle = K.kvPink;
     ctx.fillRect(0, 0, cw, ch);
-    ctx.fillStyle = P.dark;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    fitFont(ctx, A.title, cw * 0.5, (H - O.height) * PPM * 0.4, FONT_DISPLAY);
-    ctx.fillText(A.title, cw / 2, (H - O.height) * PPM * 0.5);
-    ctx.fillStyle = P.pink;
-    ctx.fillRect(0, (H - O.height - 0.1) * PPM, cw, 0.1 * PPM);
-    ctx.fillStyle = P.dark;
-    ctx.fillRect(0, ch - 0.22 * PPM, cw, 0.22 * PPM);
+    ctx.fillStyle = K.kvPurple;
+    ctx.beginPath(); ctx.moveTo(0, 0.12 * PPM); ctx.lineTo(cw, 0.26 * PPM); ctx.lineTo(cw, hb + 0.06 * PPM); ctx.lineTo(0, hb - 0.06 * PPM); ctx.closePath(); ctx.fill();
+    stickerText(ctx, A.title, cw / 2, hb * 0.5, cw * 0.5, hb * 0.4);
+    ctx.fillStyle = K.kvPurple;
+    ctx.fillRect(0, ch - 0.28 * PPM, cw, 0.28 * PPM);
   });
   backTex.wrapS = THREE.RepeatWrapping;
   backTex.repeat.x = -1;
 
   // ─── Portal body + pink offset layer ───
   const body = new THREE.Mesh(portalGeometry(W, H, D), [
-    new THREE.MeshToonMaterial({ map: faceTex }), toon('#f1eee9'), new THREE.MeshToonMaterial({ map: backTex }),
+    new THREE.MeshToonMaterial({ map: faceTex }), toon(K.kvPurple), new THREE.MeshToonMaterial({ map: backTex }),
   ]);
   body.castShadow = body.receiveShadow = true;
   body.userData.slotKey = 'archFace';
   outline(body, OUTLINE, 40);
   g.add(body);
-  const off = new THREE.Mesh(portalGeometry(W, H + A.offset.y, 0.06), toon(P[A.offset.color]));
+  const off = new THREE.Mesh(portalGeometry(W, H + A.offset.y, 0.06), toon(kc(A.offset.color)));
   off.position.set(A.offset.x, 0, -D / 2 - 0.05);
   outline(off, OUTLINE, 40);
   g.add(off);
+
+  // Printed outer sides (straight part): pink halftone, mint ticker, purple kick
+  const sideH = H - A.cornerRadius;
+  const sideTex = canvasTexture(Math.round(D * PPM), Math.round(sideH * PPM), (ctx, cw, ch) => {
+    ctx.fillStyle = K.kvPink;
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.fillStyle = K.kvMagenta;
+    for (let y = 0.06, r = 0; y < sideH; y += 0.12, r++) for (let x = 0.06 + (r % 2) * 0.06; x < D; x += 0.12) {
+      ctx.beginPath(); ctx.arc(x * PPM, y * PPM, 0.045 * PPM * (0.3 + 0.7 * (y / sideH)), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = K.kvYellow;
+    ctx.beginPath(); ctx.moveTo(0, ch * 0.18); ctx.lineTo(cw, ch * 0.08); ctx.lineTo(cw, ch * 0.2); ctx.lineTo(0, ch * 0.3); ctx.closePath(); ctx.fill();
+    const tw = 0.3 * PPM, tx = cw / 2 - tw / 2;
+    ctx.fillStyle = K.kvMint;
+    ctx.fillRect(tx, 0, tw, ch);
+    ctx.fillStyle = P.dark;
+    ctx.fillRect(tx - 3, 0, 3, ch);
+    ctx.fillRect(tx + tw, 0, 3, ch);
+    ctx.save();
+    ctx.translate(cw / 2, ch);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = `900 ${0.2 * PPM}px ${FONT_DISPLAY}`;
+    ctx.fontStretch = 'expanded';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = K.kvPink;
+    const t = `${A.ticker}  ✦  `, w = ctx.measureText(t).width;
+    for (let x = 0.3 * PPM; x < ch + w; x += w) ctx.fillText(t, x, 2);
+    ctx.restore();
+    ctx.fillStyle = K.kvPurple;
+    ctx.fillRect(0, ch - 0.28 * PPM, cw, 0.28 * PPM);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = P.dark;
+    ctx.strokeRect(0, 0, cw, ch);
+  });
+  for (const sx of [-1, 1]) {
+    const sp = new THREE.Mesh(new THREE.PlaneGeometry(D, sideH), toon(P.white, { map: sideTex }));
+    sp.position.set(sx * (W / 2 + 0.004), sideH / 2, 0);
+    sp.rotation.y = sx * Math.PI / 2;
+    sp.receiveShadow = true;
+    g.add(sp);
+  }
 
   // ─── Swappable artwork: whole face, logo, two timetable boards ───
   const faceSlot = customSlot('archFace', {
@@ -190,12 +322,12 @@ export function buildArchZone({ origin = new THREE.Vector3(), seed = 42 } = {}) 
     const x = side * (O.width / 2 + legW / 2);
     const back = box(BD.width + 0.12, BD.height + 0.12, 0.04, toon(P.dark), { edges: false });
     back.position.set(x, BD.bottom + BD.height / 2, D / 2 + 0.02);
-    const offB = box(BD.width + 0.12, BD.height + 0.12, 0.02, toon(side < 0 ? P.yellow : P.cyan), { edges: false });
+    const offB = box(BD.width + 0.12, BD.height + 0.12, 0.02, toon(side < 0 ? K.kvYellow : K.kvMint), { edges: false });
     offB.position.set(x + 0.08, BD.bottom + BD.height / 2 - 0.08, D / 2 + 0.005);
     boardGroup.add(offB, back);
     const s = makeSlot(key, {
       w: BD.width, h: BD.height, bg: P.white, emissive: false,
-      placeholder: labelPlaceholder('TIMETABLE PLACEHOLDER', `${BD.width} × ${BD.height} M`, 'Panel stage · Mini stage schedule', { bg: P.white, fg: P.dark, offset: side < 0 ? P.yellow : P.cyan }),
+      placeholder: labelPlaceholder('TIMETABLE PLACEHOLDER', `${BD.width} × ${BD.height} M`, 'Panel stage · Mini stage schedule', { bg: P.white, fg: P.dark, offset: side < 0 ? K.kvYellow : K.kvMint }),
     });
     s.group.position.set(x, BD.bottom + BD.height / 2, D / 2 + 0.045);
     boardGroup.add(s.group);
@@ -204,8 +336,8 @@ export function buildArchZone({ origin = new THREE.Vector3(), seed = 42 } = {}) 
   g.add(boardGroup);
 
   // ─── Sparkles on the corners ───
-  for (const [x, y, size, c] of [[-W / 2 + 0.05, H - 0.05, 1.0, P.yellow], [W / 2 - 0.05, H - 0.1, 0.7, P.pink],
-    [-W / 2 + 0.1, 0.55, 0.5, P.cyan], [W / 2 - 0.1, 0.6, 0.55, P.yellow]]) {
+  for (const [x, y, size, c] of [[-W / 2 + 0.05, H - 0.05, 1.0, K.kvYellow], [W / 2 - 0.05, H - 0.1, 0.7, K.kvMint],
+    [W / 2 - 1.5, H + 0.08, 0.42, P.white], [-W / 2 + 0.1, 0.55, 0.5, P.white], [W / 2 - 0.1, 0.6, 0.55, K.kvYellow]]) {
     const st = starSticker(size, c);
     st.position.set(x, y, D / 2 + 0.12);
     g.add(st);

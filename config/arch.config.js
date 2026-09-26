@@ -12,9 +12,22 @@ export const arch = {
   opening: { width: 4, height: 3 },
   cornerRadius: 0.45,       // EST die-cut rounding, outer top corners
   openingRadius: 0.35,      // EST rounding, opening top corners
-  offset: { x: 0.22, y: 0.18, color: 'pink' },   // EST pink offset layer, behind
+  offset: { x: 0.22, y: 0.18, color: 'kvYellow' },   // EST offset layer, behind
   title: 'BALLROOM',
   subtitle: 'PANEL STAGE · MINI STAGE',
+  ticker: 'OTAKU POP FES',                          // vertical ticker text on the outer edges
+};
+
+// Arch palette, sampled from the OPF 2027 key visual (hot pink halftone, purple
+// band, yellow slab, mint edge tickers, violet chevrons) + the OPF dark outline.
+// Only colours and graphic language are taken from the KV — never its character art.
+export const archPalette = {
+  kvPink: '#F12B83',      // base
+  kvMagenta: '#ED49BC',   // halftone dots
+  kvPurple: '#5A50F0',    // header ribbon, sides, kick strip
+  kvViolet: '#8233E6',    // chevrons
+  kvYellow: '#FFF02D',    // diagonal slab, offset layer, sparkles
+  kvMint: '#00CE92',      // edge tickers
 };
 
 // Schedule boards on the legs (texture slots)

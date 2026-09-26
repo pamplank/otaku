@@ -86,6 +86,15 @@ mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer 
 
 Flow arrows (overview) now all run foyer → through the arch → main doors, then split to each zone (`flows`).
 
+### Arch redesign (KV palette)
+
+| Item | Assumed | Config |
+|---|---|---|
+| Palette (sampled from the OPF 2027 KV) | hot pink #F12B83 base, magenta #ED49BC halftone, purple #5A50F0 ribbon / sides / kick strip, violet #8233E6 chevrons, yellow #FFF02D slab / offset, mint #00CE92 edge tickers, OPF dark outline | `archPalette` |
+| Face layout | purple header ribbon 0.26–1.26 m from the top (slight tilt) with the supplied logo left and the "BALLROOM" sticker title + yellow subtitle pill right; diagonal yellow slab on the left leg; 0.3 m mint "OTAKU POP FES" tickers on the outer edges; 0.28 m purple kick strip; white rim around the opening | `src/ballroom/archZone.js` |
+| Sides | outer sides printed (pink halftone, mint ticker, purple kick); depth faces and opening walls purple; yellow offset layer behind | `arch.offset` |
+| Graphic language only | colours, halftone, chevrons, sparkle bursts, music-note doodles — no KV character art is reproduced | — |
+
 ## Step 5 · IP Booths Plan A / B / C (`config/booths.config.js`)
 
 Given in the brief: Plan A 6 × 6 m, 100 mm timber platform, KV 3.9 × 3.0 m, counter 2.0 m wide · Plan B 6 m frontage × 3 m depth × 3 m high · Plan C backdrop 3.0 × 2.0 m. Everything else is assumed:
