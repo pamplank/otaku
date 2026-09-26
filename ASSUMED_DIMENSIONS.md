@@ -80,3 +80,32 @@ mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer 
 | Night wash on the arch face | soft point light, 3.6 m up, 4.5 m in front | `src/builds/arch.js` |
 
 Flow arrows (overview) now all run foyer → through the arch → main doors, then split to each zone (`flows`).
+
+## Step 5 · IP Booths Plan A / B / C (`config/booths.config.js`)
+
+Given in the brief: Plan A 6 × 6 m, 100 mm timber platform, KV 3.9 × 3.0 m, counter 2.0 m wide · Plan B 6 m frontage × 3 m depth × 3 m high · Plan C backdrop 3.0 × 2.0 m. Everything else is assumed:
+
+| Item | Assumed | Config |
+|---|---|---|
+| **Plan A** KV panel: thickness / set-back from the rear edge | 0.12 / 0.1, standing on the platform, rear braces behind | `planA.kvPanel` |
+| Main experience placeholder volume | 2.2 w × 2.0 d × 2.2 h, centre 0.4 m forward of the booth centre (leaves a ≈2.2 m photo zone at the KV) | `planA.experience` |
+| Doorways on the volume | IN on the queue side, OUT at the back towards the photo spot (0.85–0.9 × 1.95) | `src/booths/planA.js` |
+| Display counter: depth / height / position | 0.5 / 0.95, along the right side, facing the guest path | `planA.counter` |
+| Photo spot | ≈0.85 in front of the KV, centred on the volume | `planA.photo` |
+| Queue: lane width / post spacing / route | 0.8 / 0.9, front-left corner back to the volume's IN door (4 guests drawn) | `planA.queue` |
+| INFO / RESET point | 0.6 × 0.45 × 1.05 h podium at the front, beside the exit | `planA.info` |
+| Staff positions | Director at info, Welcome at the queue entry, Host A at the IN door, Host B at the photo spot, Exit / Reset behind the counter | `planA.staff` |
+| **Plan B** shell wall thickness | 0.1 | `planB.shell` |
+| Exhibition panels | 3 × 1.2 × 2.0, bottom 0.5, on the back wall | `planB.panels` |
+| Photo spot panel | 1.5 × 2.4, bottom 0.2, at the right end of the back wall | `planB.photo` |
+| RR ADDS title intro panel | 0.9 × 2.0, bottom 0.3, freestanding at the left of the open edge | `planB.intro` |
+| RR ADDS 1-2-3 markers | Ø0.32 discs, 2.75 up, above each panel | `planB.markers` |
+| RR ADDS "stand here" cue | 0.7 floor disc, 1.05 in front of the photo panel | `planB.standHere` |
+| **Plan C** area drawn around the photo spot | 5 × 4 (no footprint was given) | `planC.footprint` |
+| Backdrop: bottom edge / supports | 0.2 above the floor, two posts with floor feet behind | `planC.backdrop` |
+| Standees | 2 × 1.8 h × 0.7 w neutral silhouettes, 2.05 either side, turned in slightly | `planC.standees` |
+| Photo clearance (annotation only) | 4.0 w × 3.0 d × 2.2 h in front of the backdrop | `planC.clearance` |
+| **All booths** visitor aisle in front | 3.0 wide, with dashed same-size neighbour plots either side | `context.aisle` |
+| Staff role tags | 2.05 above the floor (Plan A adds the 0.1 platform) | `src/booths/common.js` |
+
+Artwork slots (all "IP ARTWORK – SUPPLIED BY CYBERE" until uploaded): Plan A KV + counter front · Plan B panels 1–3, photo panel, RR title intro panel · Plan C backdrop. The main experience volume and the standees stay neutral placeholders (no artwork slot).

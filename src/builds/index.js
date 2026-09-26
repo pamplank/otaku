@@ -6,9 +6,9 @@ export const BUILDS = [
   { id: 'mini', group: 'Stages', name: 'Mini Stage', where: 'Grand Ballroom', path: '/ballroom/mini', load: () => import('./mini.js') },
   { id: 'arch', group: 'Stages', name: 'Ballroom Arch', where: 'Ballroom foyer', path: '/ballroom/arch', load: () => import('./arch.js') },
   { id: 'ballroom', group: 'Stages', name: 'Ballroom Overview', where: 'Grand Ballroom', path: '/ballroom', load: () => import('./ballroom.js') },
-  { id: 'booth-a', group: 'Booths', name: 'Plan A', where: 'Hosted exhibition', path: '/booths/a', step: 5 },
-  { id: 'booth-b', group: 'Booths', name: 'Plan B', where: 'Exhibition + photo', path: '/booths/b', step: 5 },
-  { id: 'booth-c', group: 'Booths', name: 'Plan C', where: 'Photo spot', path: '/booths/c', step: 5 },
+  { id: 'booth-a', group: 'Booths', name: 'Plan A', where: 'Hosted exhibition', path: '/booths/a', load: () => import('./boothA.js') },
+  { id: 'booth-b', group: 'Booths', name: 'Plan B', where: 'Exhibition + photo', path: '/booths/b', load: () => import('./boothB.js') },
+  { id: 'booth-c', group: 'Booths', name: 'Plan C', where: 'Photo spot', path: '/booths/c', load: () => import('./boothC.js') },
   { id: 'zone', group: 'Booths', name: 'IP Booth Zone', where: 'Crystal Pavilion', path: '/booths/zone', step: 6 },
 ];
 
