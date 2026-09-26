@@ -271,10 +271,25 @@ export async function startViewer(build) {
   let shared = null;
   let logoMove = null;
   const setShared = (state) => { shared = state; };
+  // A build's own slots follow its state; slots shown from other builds follow theirs.
+  const ownKeys = build.artwork ? Object.keys(build.artwork) : Object.keys(slots).filter((k) => !(build.alsoShow ?? []).some((a) => a.keys.includes(k)));
+  const applyKeys = (state, keys) => {
+    for (const key of keys) slots[key]?.setShared(state.slots?.[key] ?? null);
+  };
+  const others = {};
+  const applyOthers = async () => {
+    for (const a of build.alsoShow ?? []) {
+      const st = await fetchState(a.id);
+      if (st && st.updatedAt !== others[a.id]) {
+        others[a.id] = st.updatedAt;
+        applyKeys(st, a.keys);
+      }
+    }
+  };
   const applyShared = (state) => {
     if (!state) return;
     shared = state;
-    for (const [key, slot] of Object.entries(slots)) slot.setShared(state.slots?.[key] ?? null);
+    applyKeys(state, ownKeys);
     if (built.logoSign && !logoMove?.isBusy()) {
       built.logoSign.pose = state.logoPose ?? null;
       built.logoSign.apply();
@@ -284,6 +299,7 @@ export async function startViewer(build) {
   (async () => {
     const [state, status] = await Promise.all([fetchState(), adminStatus()]);
     applyShared(state);
+    applyOthers();
     setupAdminEntry(status);
     if (status.admin && build.artwork) {
       document.getElementById('artBtn').hidden = false;
@@ -297,6 +313,7 @@ export async function startViewer(build) {
       if (document.hidden) return;
       const next = await fetchState();
       if (next && next.updatedAt !== shared?.updatedAt) applyShared(next);
+      applyOthers();
     }, 30000);
   })();
 

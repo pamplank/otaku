@@ -2,7 +2,7 @@
 // demand, so each page only downloads its own scene code.
 export const BUILDS = [
   { id: 'main', group: 'Stages', name: 'Main Stage', where: 'Crystal Pavilion', path: '/main', load: () => import('./main.js') },
-  { id: 'panel', group: 'Stages', name: 'Panel Stage', where: 'Grand Ballroom', path: '/ballroom/panel', step: 2 },
+  { id: 'panel', group: 'Stages', name: 'Panel Stage', where: 'Grand Ballroom', path: '/ballroom/panel', load: () => import('./panel.js') },
   { id: 'mini', group: 'Stages', name: 'Mini Stage', where: 'Grand Ballroom', path: '/ballroom/mini', step: 3 },
   { id: 'arch', group: 'Stages', name: 'Ballroom Arch', where: 'Ballroom foyer', path: '/ballroom/arch', step: 4 },
   { id: 'ballroom', group: 'Stages', name: 'Ballroom Overview', where: 'Grand Ballroom', path: '/ballroom', load: () => import('./ballroom.js') },

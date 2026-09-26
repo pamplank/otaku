@@ -151,7 +151,7 @@ button:focus-visible, .check input:focus-visible { outline: 3px solid var(--cyan
   background: var(--white); border: var(--line) solid var(--dark); border-radius: 12px; box-shadow: 5px 5px 0 var(--dark);
   overflow: hidden;
 }
-.hotspot.open { z-index: 10; }
+.hotspot.open { z-index: 100000 !important; } /* above the renderer's per-label depth order */
 .hotspot.open .hs-card { display: block; }
 .hs-card h4 {
   margin: 0; padding: 7px 12px; font-size: 12px; background: var(--cyan); border-bottom: var(--line) solid var(--dark);

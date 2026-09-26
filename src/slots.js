@@ -191,7 +191,7 @@ function disposeRes(res) {
   if (res.url) URL.revokeObjectURL(res.url);
 }
 
-function slotController(key, { apply, info, placeholderThumb }) {
+function slotController(key, { apply, info, placeholderThumb, assets }) {
   let current = null; // loaded artwork ({ tex, video?, url? }) or null for the placeholder
   let assetRes = null; // the /public/assets file, shown when nothing is published
   let seq = 0; // ignores loads that finish after a newer one started
@@ -250,7 +250,7 @@ function slotController(key, { apply, info, placeholderThumb }) {
   slotStatus[key] = 'placeholder';
 
   // The /public/assets probe (slow for video) shows only if nothing is published.
-  const ready = loadFirst(A[key]).then((asset) => {
+  const ready = loadFirst(assets ?? A[key] ?? []).then((asset) => {
     assetRes = asset;
     if (asset && sharedUrl === null && slot.source === 'placeholder') show(asset, 'asset');
   });
@@ -260,7 +260,8 @@ function slotController(key, { apply, info, placeholderThumb }) {
 
 // ─── Flat slot ──────────────────────────────────────────────────────────────
 // w × h plane facing +z. Content is contain-fitted inside (1 - 2·padding).
-export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = true }) {
+// assets: default files to try in /public (the main stage's come from stage.config.js).
+export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = true, assets }) {
   const group = new THREE.Group();
   const MatClass = emissive ? THREE.MeshBasicMaterial : THREE.MeshToonMaterial;
 
@@ -283,6 +284,7 @@ export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = t
 
   let phThumb = null;
   const { slot, ready } = slotController(key, {
+    assets,
     info: { width: aw, height: ah, aspect: aw / ah },
     placeholderThumb: () => (phThumb ??= phTex.image.toDataURL()),
     apply(res) {
@@ -389,6 +391,37 @@ function splitCaps(geo) {
     geo.addGroup(g.start, half, 2);
     geo.addGroup(g.start + half, half, 0);
   }
+}
+
+// Generic labelled placeholder: title, size line and a note, on a striped ground.
+export function labelPlaceholder(title, size, note, { bg = '#1a181b', fg = P.white, card = P.white, offset = P.pink } = {}) {
+  return (ctx, w, h) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    stripes(ctx, w, h, ['#FF66AD33', '#00CAD833', '#FFF33F2e'], Math.max(w, h) / 6);
+    const s = Math.min(w, h);
+    const bw = w * 0.84, bh = Math.min(h * 0.5, bw * 0.42);
+    const bx = (w - bw) / 2, by = (h - bh) / 2 - h * 0.05;
+    ctx.fillStyle = offset;
+    ctx.fillRect(bx + s * 0.025, by + s * 0.025, bw, bh);
+    ctx.fillStyle = card;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.lineWidth = s * 0.012;
+    ctx.strokeStyle = P.dark;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = P.dark;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    fitText(ctx, title, bw * 0.88, bh * 0.32, FONT);
+    ctx.fillText(title, w / 2, by + bh * 0.4);
+    fitText(ctx, size, bw * 0.88, bh * 0.14, FONT);
+    ctx.fillText(size, w / 2, by + bh * 0.74);
+    if (note) {
+      ctx.fillStyle = fg;
+      fitText(ctx, note, w * 0.86, Math.min(h * 0.05, s * 0.07), FONT_BODY);
+      ctx.fillText(note, w / 2, Math.min(h * 0.9, by + bh + (h - by - bh) / 2));
+    }
+  };
 }
 
 export { placeholders };

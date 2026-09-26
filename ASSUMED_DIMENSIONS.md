@@ -20,20 +20,34 @@ Given sizes from the brief are not listed here.
 | Networking props | 8 high tables Ø0.8 × 1.1 h, 3 benches 2.4 × 0.5, noticeboard 2.4 × 1.6 | `src/builds/ballroom.js` |
 | Pause pocket props | 4 soft seats 1.4 × 0.8, water point, REST sign 1.2 × 0.6 | `src/builds/ballroom.js` |
 
-Used by the overview's massing (detailed in later steps):
+Used by the overview's massing of the mini stage (detailed in step 3):
 
 | Item | Assumed | Config |
 |---|---|---|
-| Panel stage: frame top | 6.2 | `config/panel.config.js` → `stage.frameTop` |
-| Panel stage: logo lightbox size | 3.2 × 0.8 | `stage.logo` |
-| Panel stage: goalpost truss span | 13 | `stage.truss.span` |
-| Panel stage: IMAG towers, centre from the stage centre line | 8.4 | `stage.imag.x` |
-| Theatre seating: row pitch / seat width / side aisles | 0.95 / 0.55 / 1.5 | `seating` |
-| Camera riser height | 0.6 | `cameraRiser.height` |
-| FOH table / gap behind the last row | 3 × 1.5 / 2.5 | `foh` |
 | Mini stage: goalpost truss span | 8 | `config/mini.config.js` → `stage.truss.span` |
 | Mini stage: first chair row / row pitch / seat width | 2.5 / 0.95 / 0.55 | `seating` |
 | Mini stage: standing area depth behind the chairs | 4.5 | `standing.depth` |
 
 Derived areas (as drawn): room 50 × 33 = 1,650 m² (venue: 1,649 m²); panel zone ≈ 1,100 m²;
 mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer ≈ 400 m².
+
+## Step 2 · Panel Stage (`config/panel.config.js`)
+
+| Item | Assumed | Config |
+|---|---|---|
+| Sticker-card frame: top / setback from the deck's back edge / thickness | 6.4 / 0.4 / 0.12 | `stage.frame` |
+| Header box (cyan/dark checkerboard): height / depth / square | 0.65 / 0.5 / 0.22 (bottom 5.75, clears the LED top at 5.575) | `stage.header` |
+| OPF logo lightbox: size / depth | 3.2 × 0.8 / 0.3 (top edge 7.2 as given) | `stage.logo` |
+| Box truss: span (outer) / front goalpost position | 12.6 / 0.3 in front of the deck edge; back goalpost 0.5 behind the frame | `stage.truss` |
+| IMAG screens: centre from the stage centre line / z / tower height | 8.3 / 1.0 behind the deck front / 4.6 | `stage.imag` |
+| PA stacks (ground-stacked) | 2 × (0.7 × 0.7 × 1.0) each side, at x ±6.2 | `stage.pa` |
+| Stairs: width / steps / going / position | 1.2 / 4 × 0.2 rise / 0.3 / centres at x ±3.9 on the front edge | `access.stairs` |
+| Handrails | 0.9 above the nosings, both sides of each stair | `src/ballroom/rig.js` |
+| Portable wheelchair lift: platform / position | 1.1 × 1.5, stage right beside the deck | `access.lift` |
+| Panel table: depth / height / set-back | 0.7 / 0.72 / 2.2 behind the deck front | `furniture.table` |
+| MC podium: size / position | 0.7 × 0.5 × 1.15, stage left at x 4.2 | `furniture.podium` |
+| Lounge layout: armchairs / low tables | 0.8 × 0.78 armchairs in a shallow arc; Ø0.8 × 0.42 tables | `src/ballroom/panelZone.js` |
+| Q&A mic stands | beside rows 4 and 9, on alternate aisle edges | `qaMics` |
+| Camera riser height | 0.6 (2 × 2, 12 m back as given) | `cameraRiser` |
+| FOH table / gap behind the last row | 3 × 1.5 / 2.5 | `foh` |
+| Theatre seats: row pitch / seat width / side aisles | 0.95 / 0.55 / 1.5 | `seating` |

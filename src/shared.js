@@ -4,7 +4,7 @@
 
 let build = 'main';
 export const setBuild = (id) => { build = id; };
-const q = () => (build === 'main' ? '' : `?build=${encodeURIComponent(build)}`);
+const q = (id = build) => (id === 'main' ? '' : `?build=${encodeURIComponent(id)}`);
 
 async function call(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
@@ -21,8 +21,9 @@ async function call(path, { method = 'GET', body } = {}) {
 }
 
 // { slots: { led: {url, name, type, path}, … }, logoPose, updatedAt, configured } or null
-export async function fetchState() {
-  try { return await call(`/api/state${q()}`); } catch { return null; }
+// id: another build's state (the overview shows each stage's published artwork)
+export async function fetchState(id) {
+  try { return await call(`/api/state${q(id)}`); } catch { return null; }
 }
 
 export const saveState = (patch) => call(`/api/state${q()}`, { method: 'PUT', body: patch });

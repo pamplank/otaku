@@ -3,7 +3,7 @@
 // flow arrows, and area labels with m² and seat counts.
 import * as THREE from 'three';
 import { room as R, foyer as F, doors as D, placement as PL, divider as DV } from '../../config/ballroom.config.js';
-import { stage as PS, seating as SEAT, cameraRiser as CR, foh as FOH } from '../../config/panel.config.js';
+import { stage as PS, seating as SEAT, cameraRiser as CR } from '../../config/panel.config.js';
 import { stage as MS, seating as MSEAT, standing as MSTAND } from '../../config/mini.config.js';
 import { arch as AR } from '../../config/arch.config.js';
 import { palette as P } from '../../stage.config.js';
@@ -12,7 +12,8 @@ import { buildLabels } from '../labels.js';
 import { buildRoom, zones } from '../ballroom/room.js';
 import { theatreSeating, chairRows } from '../ballroom/seating.js';
 import { crowd, figure, scatter, colorPicker, mulberry32 } from '../ballroom/figures.js';
-import { panelStageMassing, miniStageMassing, archMassing } from '../ballroom/massing.js';
+import { miniStageMassing, archMassing } from '../ballroom/massing.js';
+import { buildPanelZone, PANEL_ARTWORK } from '../ballroom/panelZone.js';
 
 const m = (v) => `${+v.toFixed(2)} m`;
 const m2 = (a) => `≈ ${Math.round(a).toLocaleString('en-US')} m²`;
@@ -114,7 +115,8 @@ export default {
     { key: 'divider', label: 'Divider', on: !DV.open },
     { key: 'flows', label: 'Flow arrows', on: true },
   ],
-  artwork: null, // artwork is set in each stage's own build
+  artwork: null, // artwork is set in each stage's own build, and shown here too:
+  alsoShow: [{ id: 'panel', keys: Object.keys(PANEL_ARTWORK) }],
   create() {
     const room = buildRoom();
     const { rects, areas } = room;
@@ -122,20 +124,9 @@ export default {
     const rand = mulberry32(1649);
     const pick = colorPicker(rand);
 
-    // Panel zone: stage, 480 theatre seats, camera riser, FOH
-    const panel = new THREE.Group();
-    panel.position.set(PL.panel.x, 0, PL.panel.z);
-    panel.add(panelStageMassing());
-    const seating = theatreSeating(SEAT);
-    panel.add(seating.group);
-    const riser = box(CR.width, CR.height, CR.depth, toon('#3a373a'));
-    riser.position.set(0, CR.height / 2, CR.back);
-    const lastRow = SEAT.firstRow + (SEAT.rows - 1) * SEAT.rowPitch + 0.3;
-    const fohZ = lastRow + 0.5 + FOH.gap + FOH.depth / 2;
-    const fohDesk = box(FOH.width, 0.9, FOH.depth, toon('#2f2c32'));
-    fohDesk.position.set(0, 0.45, fohZ);
-    panel.add(riser, fohDesk);
-    g.add(panel);
+    // Panel zone: the full Panel Stage build (stage, 480 seats, riser, FOH, people)
+    const panel = buildPanelZone({ origin: new THREE.Vector3(PL.panel.x, 0, PL.panel.z), seed: 1650 });
+    const lastRow = panel.lastRow;
 
     // Mini stage zone
     const mini = new THREE.Group();
@@ -163,10 +154,9 @@ export default {
     // ─── People ───
     const people = new THREE.Group();
     const seated = [];
-    for (const s of seating.seats) if (rand() < 0.8) seated.push({ x: PL.panel.x + s.x, z: PL.panel.z + s.z, rot: Math.PI, color: pick() });
     for (const s of chairs.seats) if (rand() < 0.65) seated.push({ x: PL.mini.x + s.x, z: PL.mini.z + s.z, rot: Math.PI, color: pick() });
     for (const [x, z] of softSeats.slice(0, 3)) seated.push({ x, y: -0.03, z, rot: Math.PI / 2 * (rand() > 0.5 ? 1 : -1), color: pick() });
-    people.add(crowd(seated, { seatedPose: true }));
+    people.add(crowd(seated, { seatedPose: true }), panel.people);
 
     const standing = [];
     const face = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
@@ -185,9 +175,6 @@ export default {
       }
     }
     // standing at the back of the panel zone
-    for (const s of scatter(rand, { x0: PL.panel.x - 12, x1: PL.panel.x + 12, z0: PL.panel.z + fohZ + 2, z1: zD - 2.5, count: 10, gap: 1.2, avoid: (x) => Math.abs(x - PL.panel.x) < 2.5 })) {
-      standing.push({ ...s, rot: face(s.x, s.z, PL.panel.x, PL.panel.z), color: pick(), scale: (1.52 + rand() * 0.34) / 1.7 });
-    }
     // foyer
     const [fx0, fz0, fx1, fz1] = rects.foyer;
     for (const s of scatter(rand, { x0: fx0 + 2, x1: fx1 - 2, z0: fz0 + 1.2, z1: fz1 - 0.8, count: 22, gap: 1.4,
@@ -204,7 +191,7 @@ export default {
         people.add(s);
       }
     }
-    const seatedCount = seated.length, standingCount = standing.length + D.list.length * 2;
+    const seatedCount = seated.length + panel.counts.seated + panel.counts.panelists, standingCount = standing.length + D.list.length * 2;
 
     // ─── Labels ───
     const { xSplit } = zones();
@@ -216,7 +203,7 @@ export default {
         lines: ['Pixel-mapped LED ceiling (venue)', `${m(R.ceiling)} above the floor`, 'Toggle: LED ceiling'] },
       { id: 'panel', pos: [PL.panel.x - PS.deck.width / 2, PS.truss.top + 0.4, PL.panel.z - PS.deck.depth], title: 'Panel stage zone',
         lines: [`Left ~2/3 · ${m2(areas.panel)}`, `Stage ${PS.deck.width} × ${PS.deck.depth} m · deck ${m(PS.deck.height)}`,
-          `${seating.group.userData.count} seats · ${SEAT.blocks} blocks × ${SEAT.rows} rows × ${SEAT.seatsPerRow}`, 'Detailed build: step 2'] },
+          `${panel.counts.seats} seats · ${SEAT.blocks} blocks × ${SEAT.rows} rows × ${SEAT.seatsPerRow}`, 'Full build: Panel Stage'] },
       { id: 'seats', pos: [PL.panel.x + 12, 1.6, (PL.panel.z + SEAT.firstRow + lastRowWorld) / 2], title: 'Theatre seating',
         lines: [`First row ${m(SEAT.firstRow)} from the stage`, `Centre aisle ${m(SEAT.centreAisle)} · side aisles ${m(SEAT.sideAisle)}`, `Front ${SEAT.vipRows} rows VIP (yellow covers)`] },
       { id: 'mini', pos: [PL.mini.x - MS.deck.width / 2, MS.truss.top + 0.4, PL.mini.z - MS.deck.depth], title: 'Mini stage zone',
@@ -236,23 +223,24 @@ export default {
     ]);
 
     return {
-      groups: [room.group, g],
+      groups: [room.group, g, panel.group],
       decalRoots: [room.group],
       people,
       labels,
       lighting: {
-        fixtures: [], glows: [],
+        fixtures: panel.fixtures, glows: panel.glows,
         sun: { pos: [-30, 48, 44], target: [0, 0, 3], extent: 40, far: 160 },
         spill: null,
         onNight: room.setNight,
       },
-      slotsReady: [],
-      counts: { seats: seating.group.userData.count + chairs.group.userData.count, seated: seatedCount, standing: standingCount },
+      slotsReady: panel.slotsReady,
+      counts: { seats: panel.counts.seats + chairs.group.userData.count, seated: seatedCount, standing: standingCount },
       visibility(state, { plan }) {
         room.ceiling.visible = state.ceiling && !plan;
         room.foyerCeiling.visible = state.foyerCeiling && !plan;
         room.divider.visible = state.divider;
         room.arrows.visible = state.flows;
+        panel.setLounge(false);
       },
     };
   },

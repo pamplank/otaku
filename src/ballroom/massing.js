@@ -3,7 +3,6 @@
 // Local coordinates: origin = deck front centre (arch: arch centre), facing +z.
 import * as THREE from 'three';
 import { palette as P } from '../../stage.config.js';
-import { stage as PS } from '../../config/panel.config.js';
 import { stage as MS } from '../../config/mini.config.js';
 import { arch as AR } from '../../config/arch.config.js';
 import { toon, flat, box, stickerPanel, canvasTexture, FONT_DISPLAY } from '../sticker.js';
@@ -40,30 +39,6 @@ function screen(w, h, label) {
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
 }
 
-export function panelStageMassing() {
-  const g = new THREE.Group();
-  const D = PS.deck;
-  const deck = box(D.width, D.height, D.depth, toon('#2b292d'));
-  deck.position.set(0, D.height / 2, -D.depth / 2);
-  g.add(deck);
-  const fh = PS.frameTop - D.height;
-  const frame = stickerPanel({ w: D.width, h: fh, t: 0.12, color: P.white, border: 0.09, offset: 0.22, offsetColor: P.pink });
-  frame.position.set(0, D.height + fh / 2, -D.depth + 0.3);
-  g.add(frame);
-  const led = screen(PS.led.width, PS.led.height, 'LED 6 × 3.375 M');
-  led.position.set(0, PS.led.bottom + PS.led.height / 2, -D.depth + 0.3 + 0.07);
-  g.add(led);
-  const logo = box(PS.logo.width, PS.logo.height, 0.3, toon(P.white));
-  logo.position.set(0, PS.logo.top - PS.logo.height / 2, -D.depth + 0.5);
-  g.add(logo);
-  goalpost(g, PS.truss, -D.depth + 0.9);
-  for (const side of [-1, 1]) {
-    const s = screen(PS.imag.width, PS.imag.height, 'IMAG');
-    s.position.set(side * PS.imag.x, PS.imag.bottom + PS.imag.height / 2, -1.2);
-    g.add(s);
-  }
-  return g;
-}
 
 export function miniStageMassing() {
   const g = new THREE.Group();
