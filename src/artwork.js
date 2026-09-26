@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { slots } from './slots.js';
 import { uploadFile, saveState } from './shared.js';
 
-const INFO = {
+// The main stage's slots; other builds pass their own list.
+export const MAIN_ARTWORK = {
   led:       { title: 'LED wall',   accept: 'image/*,video/*', kind: 'Image or video' },
   wingLeft:  { title: 'Left wing',  accept: 'image/*',         kind: 'Image' },
   wingRight: { title: 'Right wing', accept: 'image/*',         kind: 'Image' },
@@ -24,7 +25,7 @@ function ratio(a) {
 
 // getState / setState: the app's copy of the shared state (to revert a failed
 // publish, and to record the new state after one succeeds).
-export function buildArtworkPanel({ canvas, camera, getState, setState }) {
+export function buildArtworkPanel({ canvas, camera, getState, setState, info: INFO = MAIN_ARTWORK }) {
   const panel = document.getElementById('artPanel');
   const list = panel.querySelector('.art-list');
   const toggleBtn = document.getElementById('artBtn');

@@ -47,12 +47,12 @@ export function hotspotDefs() {
   ];
 }
 
-export function buildLabels() {
+export function buildLabels(defs = hotspotDefs()) {
   const group = new THREE.Group();
   group.name = 'labels';
   const all = [];
   const byId = {};
-  hotspotDefs().forEach((d, i) => {
+  defs.forEach((d, i) => {
     const el = document.createElement('div');
     el.className = `hotspot hs-c${i % 3}`; // header strip colour: cyan / pink / yellow
     el.innerHTML = `
