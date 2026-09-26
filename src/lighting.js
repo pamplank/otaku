@@ -106,7 +106,7 @@ export function buildLighting(scene, { fixtures, glassMats = [], shellLines = []
     amb.intensity = on ? 0.55 : 1.6;
     sun.color.set(on ? '#8aa0ff' : '#ffffff');
     sun.intensity = on ? 0.25 : 1.55;
-    spill.intensity = on ? 9 : 0;
+    spill.intensity = on ? (spillOpt?.intensity ?? 9) : 0;
     for (const r of rigs) {
       r.beam.visible = on;
       r.spot.intensity = on ? 55 : 0;

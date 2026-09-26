@@ -20,14 +20,6 @@ Given sizes from the brief are not listed here.
 | Networking props | 8 high tables Ø0.8 × 1.1 h, 3 benches 2.4 × 0.5, noticeboard 2.4 × 1.6 | `src/builds/ballroom.js` |
 | Pause pocket props | 4 soft seats 1.4 × 0.8, water point, REST sign 1.2 × 0.6 | `src/builds/ballroom.js` |
 
-Used by the overview's massing of the mini stage (detailed in step 3):
-
-| Item | Assumed | Config |
-|---|---|---|
-| Mini stage: goalpost truss span | 8 | `config/mini.config.js` → `stage.truss.span` |
-| Mini stage: first chair row / row pitch / seat width | 2.5 / 0.95 / 0.55 | `seating` |
-| Mini stage: standing area depth behind the chairs | 4.5 | `standing.depth` |
-
 Derived areas (as drawn): room 50 × 33 = 1,650 m² (venue: 1,649 m²); panel zone ≈ 1,100 m²;
 mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer ≈ 400 m².
 
@@ -51,3 +43,23 @@ mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer 
 | Camera riser height | 0.6 (2 × 2, 12 m back as given) | `cameraRiser` |
 | FOH table / gap behind the last row | 3 × 1.5 / 2.5 | `foh` |
 | Theatre seats: row pitch / seat width / side aisles | 0.95 / 0.55 / 1.5 | `seating` |
+
+## Step 3 · Mini Stage, networking, pause pocket (`config/mini.config.js`)
+
+| Item | Assumed | Config |
+|---|---|---|
+| Frame: setback from the deck's back edge / thickness / offset | 0.5 / 0.12 / 0.2 (5.5 × 3.5 as given) | `stage.frame` |
+| Speech-bubble sign width | 2.6 (top 5.2 as given) | `stage.sign` |
+| Goalpost truss: span / front position | 8 / 0.3 in front of the deck edge; back goalpost behind the frame | `stage.truss` |
+| PA stacks (smaller than the panel stage) | 2 × (0.5 × 0.5 × 0.7) each side, at x ±4.6 | `stage.pa` |
+| Side panels: position | on the floor either side of the deck, centres x ±3.75 | `stage.sidePanels` |
+| Front steps: width / steps / going / position | 1.2 / 3 × 0.2 / 0.3 / stage-left side (x 2.0) | `stage.steps` |
+| Chairs: first row / row pitch / seat width | 2.5 / 0.95 / 0.55 | `seating` |
+| Standing area depth behind the chairs | 4.5 (~100 people) | `standing.depth` |
+| Signing table: depth / height / set-back | 0.7 / 0.72 / 1.4 behind the deck front | `signing.table` |
+| Signing queue lane: width / post spacing / route | 1.2 / 2.0 / up the right side of the chairs, then in to the steps | `signing.lane` |
+| Networking high tables | 8 × Ø0.8 × 1.1 h on a 4.4 × 4.2 grid | `networking.highTables` |
+| Bench cluster | 3 × 2.4 × 0.5 × 0.45 h | `networking.benches` |
+| Noticeboard (texture slot) | 2.4 × 1.6, bottom 0.7, on the end wall | `networking.noticeboard` |
+| Pause pocket soft seats | 4 × 1.4 × 0.8 × 0.42 h | `pause.seat` |
+| REST sign | 1.2 × 0.6 on a post, top ≈ 2.3 | `pause.sign` |

@@ -137,3 +137,64 @@ export function stickerCard(w, h, tex, { offset = 0.08, offsetColor = P.pink, de
 }
 
 export { OUTLINE_THIN };
+
+// Belt-stanchion line through [[x, z], …]: posts every ~`post` m, belt between.
+export function beltLine(points, { post = 2, color = P.dark, beltColor = P.dark, height = 0.95 } = {}) {
+  const g = new THREE.Group();
+  const postMat = toon('#b9bcc0'), baseMat = toon('#2a282c'), belt = toon(beltColor);
+  const posts = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const [ax, az] = points[i], [bx, bz] = points[i + 1];
+    const n = Math.max(1, Math.round(Math.hypot(bx - ax, bz - az) / post));
+    for (let k = i === 0 ? 0 : 1; k <= n; k++) posts.push([ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n]);
+  }
+  for (const [x, z] of posts) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, height, 8), postMat);
+    p.position.set(x, height / 2, z);
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.03, 16), baseMat);
+    b.position.set(x, 0.015, z);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), toon(color));
+    cap.position.set(x, height + 0.02, z);
+    g.add(p, b, cap);
+  }
+  for (let i = 0; i < posts.length - 1; i++) {
+    const [ax, az] = posts[i], [bx, bz] = posts[i + 1];
+    const len = Math.hypot(bx - ax, bz - az);
+    const s = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.01), belt);
+    s.position.set((ax + bx) / 2, height - 0.06, (az + bz) / 2);
+    s.rotation.y = Math.atan2(-(bz - az), bx - ax);
+    g.add(s);
+  }
+  return g;
+}
+
+// Queue lane between two belt lines along a centre path; returns { group, spots }
+// where spots are standing positions along the lane (heading along the path).
+export function queueLane(path, { width = 1.2, post = 2, beltColor = P.dark, capColor = P.dark, spacing = 0.75 } = {}) {
+  const g = new THREE.Group();
+  const offset = (sign) => path.map(([x, z], i) => {
+    const [px, pz] = path[Math.max(0, i - 1)], [nx, nz] = path[Math.min(path.length - 1, i + 1)];
+    let dx = nx - px, dz = nz - pz;
+    const l = Math.hypot(dx, dz) || 1;
+    dx /= l; dz /= l;
+    // miter at corners
+    let k = 1;
+    if (i > 0 && i < path.length - 1) {
+      const [ax, az] = [x - px, z - pz], [bx, bz] = [nx - x, nz - z];
+      const la = Math.hypot(ax, az), lb = Math.hypot(bx, bz);
+      const cos = (ax * bx + az * bz) / (la * lb);
+      k = 1 / Math.max(0.5, Math.sqrt((1 + cos) / 2));
+    }
+    return [x - dz * sign * (width / 2) * k, z + dx * sign * (width / 2) * k];
+  });
+  g.add(beltLine(offset(1), { post, beltColor, color: capColor }), beltLine(offset(-1), { post, beltColor, color: capColor }));
+  const spots = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const [ax, az] = path[i], [bx, bz] = path[i + 1];
+    const len = Math.hypot(bx - ax, bz - az);
+    for (let d = i === 0 ? 0.4 : spacing; d < len; d += spacing) {
+      spots.push({ x: ax + ((bx - ax) * d) / len, z: az + ((bz - az) * d) / len, rot: Math.atan2(bx - ax, bz - az) });
+    }
+  }
+  return { group: g, spots };
+}
