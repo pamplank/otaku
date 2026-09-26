@@ -9,7 +9,7 @@ import { buildLabels } from '../labels.js';
 import { buildRoom } from '../ballroom/room.js';
 import { buildMiniZone, MINI_ARTWORK } from '../ballroom/miniZone.js';
 import { buildPanelZone, PANEL_ARTWORK } from '../ballroom/panelZone.js';
-import { archMassing } from '../ballroom/massing.js';
+import { buildArchZone, ARCH_ARTWORK } from '../ballroom/archZone.js';
 import { figure } from '../ballroom/figures.js';
 
 const O = new THREE.Vector3(PL.mini.x, 0, PL.mini.z);
@@ -42,16 +42,15 @@ export default {
     { key: 'divider', label: 'Divider', on: !DV.open },
   ],
   artwork: MINI_ARTWORK,
-  alsoShow: [{ id: 'panel', keys: Object.keys(PANEL_ARTWORK) }],
+  alsoShow: [{ id: 'panel', keys: Object.keys(PANEL_ARTWORK) }, { id: 'arch', keys: Object.keys(ARCH_ARTWORK) }],
   create() {
     const room = buildRoom();
     const zone = buildMiniZone({ origin: O, rects: room.rects });
     const panel = buildPanelZone({ origin: new THREE.Vector3(PL.panel.x, 0, PL.panel.z) });
-    const arch = archMassing();
-    arch.position.set(PL.arch.x, 0, PL.arch.z);
+    const arch = buildArchZone({ origin: new THREE.Vector3(PL.arch.x, 0, PL.arch.z) });
 
     const people = new THREE.Group();
-    people.add(zone.people, panel.people);
+    people.add(zone.people, panel.people, arch.people);
     for (const d of D.list) {
       for (const side of [-1, 1]) {
         const s = figure(P.yellow);
@@ -62,8 +61,8 @@ export default {
     }
     const labels = buildLabels(zone.labels);
     return {
-      groups: [room.group, zone.group, zone.around, panel.group, arch],
-      decalRoots: [room.group],
+      groups: [room.group, zone.group, zone.around, panel.group, arch.group],
+      decalRoots: [room.group, arch.group],
       people,
       labels,
       lighting: {
@@ -72,7 +71,7 @@ export default {
         spill: { pos: [zone.ledCentre.x, 2.2, zone.ledCentre.z + 3], intensity: 2.5 },
         onNight: room.setNight,
       },
-      slotsReady: [...zone.slotsReady, ...panel.slotsReady],
+      slotsReady: [...zone.slotsReady, ...panel.slotsReady, ...arch.slotsReady],
       visibility(state, { plan }) {
         room.ceiling.visible = state.ceiling && !plan;
         room.foyerCeiling.visible = !plan;

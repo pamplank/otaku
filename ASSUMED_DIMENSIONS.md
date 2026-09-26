@@ -63,3 +63,20 @@ mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer 
 | Noticeboard (texture slot) | 2.4 × 1.6, bottom 0.7, on the end wall | `networking.noticeboard` |
 | Pause pocket soft seats | 4 × 1.4 × 0.8 × 0.42 h | `pause.seat` |
 | REST sign | 1.2 × 0.6 on a post, top ≈ 2.3 | `pause.sign` |
+
+## Step 4 · Ballroom Entrance Arch (`config/arch.config.js`, placement in `config/ballroom.config.js`)
+
+| Item | Assumed | Config |
+|---|---|---|
+| Arch position | centred on the main doors, 4 m out into the foyer (x −8.3) | `placement.arch` |
+| Die-cut rounding: outer top corners / opening top corners | 0.45 / 0.35 | `arch.cornerRadius`, `arch.openingRadius` |
+| Pink offset layer: shift right / up, behind the arch | 0.22 / 0.18 | `arch.offset` |
+| Header band (logo + title) | 1.2 high (4.2 − 3.0 opening); logo area 3.3 × 0.96 at the left | `src/ballroom/archZone.js` |
+| Schedule boards: bottom edge | 0.35 (1.5 × 2.4 as given), centred on each 2 m leg | `boards.bottom` |
+| Queue lanes: width / post spacing / straight run | 1.2 / 2.0 / 11 along the foyer, then into each half of the opening | `lanes` |
+| Queue lane centre line in front of the arch | 2.9 (the foyer is 8 m deep, assumed in step 1) | `lanes.z` |
+| Ticket-check podium | 0.6 × 0.45 × 1.05 h, 1.6 in front of the arch | `lanes.podium` |
+| Queue shown | VIP 6, General 13 | `lanes.vip.queue`, `lanes.general.queue` |
+| Night wash on the arch face | soft point light, 3.6 m up, 4.5 m in front | `src/builds/arch.js` |
+
+Flow arrows (overview) now all run foyer → through the arch → main doors, then split to each zone (`flows`).

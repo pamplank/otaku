@@ -12,7 +12,7 @@ import { buildLabels } from '../labels.js';
 import { buildRoom, zones } from '../ballroom/room.js';
 import { theatreSeating, chairRows } from '../ballroom/seating.js';
 import { crowd, figure, scatter, colorPicker, mulberry32 } from '../ballroom/figures.js';
-import { archMassing } from '../ballroom/massing.js';
+import { buildArchZone, ARCH_ARTWORK } from '../ballroom/archZone.js';
 import { buildMiniZone, MINI_ARTWORK } from '../ballroom/miniZone.js';
 import { buildPanelZone, PANEL_ARTWORK } from '../ballroom/panelZone.js';
 
@@ -49,7 +49,7 @@ export default {
     { key: 'flows', label: 'Flow arrows', on: true },
   ],
   artwork: null, // artwork is set in each stage's own build, and shown here too:
-  alsoShow: [{ id: 'panel', keys: Object.keys(PANEL_ARTWORK) }, { id: 'mini', keys: Object.keys(MINI_ARTWORK) }],
+  alsoShow: [{ id: 'panel', keys: Object.keys(PANEL_ARTWORK) }, { id: 'mini', keys: Object.keys(MINI_ARTWORK) }, { id: 'arch', keys: Object.keys(ARCH_ARTWORK) }],
   create() {
     const room = buildRoom();
     const { rects, areas } = room;
@@ -65,9 +65,7 @@ export default {
     const mini = buildMiniZone({ origin: new THREE.Vector3(PL.mini.x, 0, PL.mini.z), rects, seed: 61 });
 
     // Arch in the foyer
-    const arch = archMassing();
-    arch.position.set(PL.arch.x, 0, PL.arch.z);
-    g.add(arch);
+    const arch = buildArchZone({ origin: new THREE.Vector3(PL.arch.x, 0, PL.arch.z), seed: 43 });
 
 
     // Sparkles on the far wall, above each stage zone
@@ -79,7 +77,7 @@ export default {
 
     // ─── People ───
     const people = new THREE.Group();
-    people.add(panel.people, mini.people);
+    people.add(panel.people, mini.people, arch.people);
 
     const standing = [];
     const face = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
@@ -87,7 +85,7 @@ export default {
     // foyer
     const [fx0, fz0, fx1, fz1] = rects.foyer;
     for (const s of scatter(rand, { x0: fx0 + 2, x1: fx1 - 2, z0: fz0 + 1.2, z1: fz1 - 0.8, count: 22, gap: 1.4,
-      avoid: (x, z) => Math.abs(x - PL.arch.x) < AR.width / 2 + 0.6 && Math.abs(z - PL.arch.z) < AR.depth / 2 + 0.8 })) {
+      avoid: (x, z) => (Math.abs(x - PL.arch.x) < 16 && z > PL.arch.z - AR.depth / 2 - 1.2) || Math.abs(x - PL.arch.x) < AR.width / 2 + 1 })) {
       standing.push({ ...s, rot: face(s.x, s.z, s.x + (rand() - 0.5) * 6, zD) , color: pick(), scale: (1.52 + rand() * 0.34) / 1.7 });
     }
     people.add(crowd(standing));
@@ -124,7 +122,7 @@ export default {
       { id: 'foyer', pos: [xL + 6, F.ceiling, zD + F.depth / 2], title: 'Foyer',
         lines: [`${R.width} × ${F.depth} m (depth est.) · ${m2(areas.foyer)}`, `Foyer ceiling ${m(F.ceiling)}`, `${D.list.length} double doors in the long wall`] },
       { id: 'arch', pos: [PL.arch.x + AR.width / 2, AR.height + 0.3, PL.arch.z], title: 'Entrance arch',
-        lines: [`${AR.width} × ${AR.height} × ${AR.depth} m`, `Clear opening ${AR.opening.width} × ${AR.opening.height} m`, 'Detailed build: step 4'] },
+        lines: [`${AR.width} × ${AR.height} × ${AR.depth} m`, `Clear opening ${AR.opening.width} × ${AR.opening.height} m`, 'VIP + General queue lanes', 'Full build: Ballroom Arch'] },
       { id: 'divider', pos: [xSplit, DV.height + 0.3, zB + 3], title: 'Optional divider',
         lines: [`Pipe & drape, ${m(DV.height)} high (est.)`, 'Default open · toggle: Divider'] },
       { id: 'flow', pos: [PL.arch.x - 2.2, 0.4, zD + F.depth - 1], title: 'Guest flow',
@@ -132,8 +130,8 @@ export default {
     ]);
 
     return {
-      groups: [room.group, g, panel.group, mini.group, mini.around],
-      decalRoots: [room.group],
+      groups: [room.group, g, panel.group, mini.group, mini.around, arch.group],
+      decalRoots: [room.group, arch.group],
       people,
       labels,
       lighting: {
@@ -142,7 +140,7 @@ export default {
         spill: null,
         onNight: room.setNight,
       },
-      slotsReady: [...panel.slotsReady, ...mini.slotsReady],
+      slotsReady: [...panel.slotsReady, ...mini.slotsReady, ...arch.slotsReady],
       counts: { seats: panel.counts.seats + mini.counts.seats, seated: seatedCount, standing: standingCount },
       visibility(state, { plan }) {
         room.ceiling.visible = state.ceiling && !plan;

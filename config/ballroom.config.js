@@ -55,10 +55,12 @@ export const placement = {
 };
 
 // Flow arrows: foyer → arch → doors → each zone ([x, z] waypoints)
+// Every route runs foyer → through the arch → main doors, then splits to each zone.
 export const flows = [
-  { name: 'To the panel stage', color: '#FF66AD', path: [[-8.3, 24], [-8.3, 16.5], [-8.3, 11], [-8.3, 3]] },
-  { name: 'To the mini stage', color: '#00CAD8', path: [[-8.3, 23], [13.5, 23], [13.5, 16.5], [14, 6], [16.7, -1.5]] },
-  { name: 'To networking', color: '#FFF33F', path: [[3.5, 23], [3.5, 16.5], [10.5, 9], [12, 3.5]] },
+  { name: 'Through the arch', color: '#242224', path: [[-8.3, 24.3], [-8.3, 17.2]] },
+  { name: 'To the panel stage', color: '#FF66AD', path: [[-9.1, 16], [-9.1, 11.8]] },
+  { name: 'To the mini stage', color: '#00CAD8', path: [[-7.5, 16], [-7.5, 12.6], [9.8, 12.6], [14.2, 6.2], [16.7, -1.3]] },
+  { name: 'To networking', color: '#FFF33F', path: [[10.6, 13.6], [13.8, 11]] },
 ];
 
 export const render = { width: 1920, height: 1080 };

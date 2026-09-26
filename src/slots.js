@@ -258,6 +258,14 @@ function slotController(key, { apply, info, placeholderThumb, assets }) {
   return { slot, ready };
 }
 
+// A slot whose artwork is applied by the caller (e.g. a whole die-cut arch face):
+// apply(res) gets the loaded file ({ tex, aspect, … }) or null for the default.
+export function customSlot(key, { apply, info, placeholderThumb, assets = [] }) {
+  const out = slotController(key, { apply, info, placeholderThumb, assets });
+  apply(null);
+  return out;
+}
+
 // ─── Flat slot ──────────────────────────────────────────────────────────────
 // w × h plane facing +z. Content is contain-fitted inside (1 - 2·padding).
 // assets: default files to try in /public (the main stage's come from stage.config.js).
@@ -382,7 +390,7 @@ export function dieCutBoard(source, width, { thickness = 0.05, border = 0.05, bo
 // ExtrudeGeometry gives each shape a caps group (back cap first, then front)
 // and a sides group. Split the caps so the front shows the artwork and the back
 // is plain board: material 0 = front, 1 = sides, 2 = back.
-function splitCaps(geo) {
+export function splitCaps(geo) {
   const groups = geo.groups.slice();
   geo.clearGroups();
   for (const g of groups) {

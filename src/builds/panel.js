@@ -7,7 +7,8 @@ import { palette as P } from '../../stage.config.js';
 import { buildLabels } from '../labels.js';
 import { buildRoom } from '../ballroom/room.js';
 import { buildPanelZone, PANEL_ARTWORK } from '../ballroom/panelZone.js';
-import { miniStageMassing, archMassing } from '../ballroom/massing.js';
+import { buildArchZone, ARCH_ARTWORK } from '../ballroom/archZone.js';
+import { buildMiniZone, MINI_ARTWORK } from '../ballroom/miniZone.js';
 import { crowd, figure } from '../ballroom/figures.js';
 import { doors as D } from '../../config/ballroom.config.js';
 
@@ -42,18 +43,15 @@ export default {
     { key: 'divider', label: 'Divider', on: !DV.open },
   ],
   artwork: PANEL_ARTWORK,
+  alsoShow: [{ id: 'mini', keys: Object.keys(MINI_ARTWORK) }, { id: 'arch', keys: Object.keys(ARCH_ARTWORK) }],
   create() {
     const room = buildRoom();
     const zone = buildPanelZone({ origin: O });
-    const context = new THREE.Group();
-    const mini = miniStageMassing();
-    mini.position.set(PL.mini.x, 0, PL.mini.z);
-    const arch = archMassing();
-    arch.position.set(PL.arch.x, 0, PL.arch.z);
-    context.add(mini, arch);
+    const mini = buildMiniZone({ origin: new THREE.Vector3(PL.mini.x, 0, PL.mini.z), rects: room.rects });
+    const arch = buildArchZone({ origin: new THREE.Vector3(PL.arch.x, 0, PL.arch.z) });
 
     const people = new THREE.Group();
-    people.add(zone.people);
+    people.add(zone.people, mini.people, arch.people);
     for (const d of D.list) {           // staff at the doors
       for (const side of [-1, 1]) {
         const s = figure(P.yellow);
@@ -70,23 +68,24 @@ export default {
     ]);
 
     return {
-      groups: [room.group, zone.group, context],
-      decalRoots: [room.group],
+      groups: [room.group, zone.group, mini.group, mini.around, arch.group],
+      decalRoots: [room.group, arch.group],
       people,
       labels,
       lighting: {
-        fixtures: zone.fixtures, glows: zone.glows,
+        fixtures: zone.fixtures, glows: [...zone.glows, ...mini.glows],
         sun: { pos: [O.x - 16, 30, O.z + 26], target: [O.x, 0, O.z + 5], extent: 26, far: 90 },
         spill: { pos: [zone.ledCentre.x, 3, zone.ledCentre.z + 1.5] },
         onNight: room.setNight,
       },
-      slotsReady: zone.slotsReady,
+      slotsReady: [...zone.slotsReady, ...mini.slotsReady, ...arch.slotsReady],
       visibility(state, { plan }) {
         room.ceiling.visible = state.ceiling && !plan;
         room.foyerCeiling.visible = !plan;
         room.divider.visible = state.divider;
         room.arrows.visible = false;
         zone.setLounge(state.lounge);
+        mini.setSigning(false);
       },
     };
   },
