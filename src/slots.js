@@ -311,7 +311,7 @@ export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = t
 // ─── Die-cut sign ───────────────────────────────────────────────────────────
 // A board cut to the artwork's outline plus a border (see cutout.js), facing +z
 // and centred on the group. Fits inside width × maxHeight; the art is never cropped.
-export function makeCutoutSlot(key, { width, maxHeight, thickness, border, boardColor, edgeColor, placeholder, onBuild }) {
+export function makeCutoutSlot(key, { width, maxHeight, thickness, border, boardColor, edgeColor, placeholder, onBuild, assets }) {
   const group = new THREE.Group();
   const phCanvas = document.createElement('canvas');
   phCanvas.width = 1024;
@@ -355,6 +355,7 @@ export function makeCutoutSlot(key, { width, maxHeight, thickness, border, board
 
   const opts = { border: border / width, board: boardColor };
   const { slot, ready } = slotController(key, {
+    assets,
     info: { width, height: maxHeight, aspect: width / maxHeight, spec: `≈ ${width} m wide · die-cut to the logo outline · image` },
     placeholderThumb: () => (phCut ??= dieCut(phCanvas, opts)).canvas.toDataURL(),
     apply(res) {

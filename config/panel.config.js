@@ -13,13 +13,29 @@ export const stage = {
   frame: { top: 6.4, setback: 0.4, thickness: 0.12, outline: 0.09, offset: 0.22 },  // top/setback EST
   // Header box across the top of the frame, cyan-and-dark checkerboard
   header: { height: 0.65, depth: 0.5, square: 0.22 },     // EST
-  // OPF logo lightbox centred on top (supplied logo only)
-  logo: { top: 7.2, width: 3.2, height: 0.8, depth: 0.3 }, // width/height/depth EST
+  // OPF logo: die-cut sign on the truss header's front, as on the main stage
+  // (supplied logo only, board follows its outline). Bottom edge hangs `drop` below the header top.
+  logo: { width: 4.6, maxHeight: 1.3, drop: 0.5, standoff: 0.06, thickness: 0.06, border: 0.08, board: 'white' },  // EST
+  // Printed header box on all four top truss beams, in the main stage's style but
+  // the panel stage's own print: pink, light-pink checker ends, navy corner wedges, white swooshes.
+  headerBox: { height: 1.0, depth: 0.5, theme: { base: 'pink', accent: '#ff9fcb', pattern: 'checker', wedge: '#2d2b52', swoosh: 'white', stars: ['yellow', 'cyan', 'white'] } },  // EST
   // Ground-supported box truss: goalpost at the deck front + one behind the frame
   truss: { top: 7.4, size: 0.3, span: 12.6, frontZ: 0.3, lights: 6 },  // span/frontZ EST
   // Side IMAG screens on their own truss towers
   imag: { width: 3.2, height: 1.8, bottom: 2.5, x: 8.3, z: -1.0, towerTop: 4.6 },  // x/z/towerTop EST
   pa: { width: 0.7, depth: 0.7, heights: [1.0, 1.0], x: 6.2, z: -0.6 },  // EST ground-stacked PA
+};
+
+// Main-stage-style dressing, panel stage colours
+export const dressing = {
+  paWraps: { colors: ['cyan', 'yellow'], labels: ['2027', 'PANEL'] },
+  // die-cut sparkles hanging from the side beams: [x, y, z, size, colour]
+  sparkles: [
+    [-5.9, 5.3, -1.2, 1.0, 'yellow'], [-5.6, 5.8, -3.4, 0.7, 'cyan'], [5.95, 5.4, -1.5, 0.85, 'yellow'],
+    [5.6, 5.85, -3.6, 0.6, 'cyan'], [-5.0, 5.9, -2.3, 0.45, 'white'], [5.0, 5.8, -2.6, 0.5, 'white'],
+  ],
+  bubble: { text: 'LET’S TALK!!', x: 6.2, y: 5.55, z: 1.0, width: 2.2, board: 'cyan', edge: '#00a3ae', tail: 'left' },
+  neon: ['pink', 'cyan', 'yellow'],   // header top, header bottom, deck edge (night only)
 };
 
 export const access = {

@@ -1,16 +1,19 @@
-// PANEL STAGE zone: stage, frame, LED, header, logo lightbox, IMAG towers, truss,
+// PANEL STAGE zone: stage, frame, LED, header, truss with a printed header box and
+// the die-cut OPF logo (main stage style, panel colours), IMAG towers,
 // furniture (panel table or lounge), access, theatre seating, Q&A mics, camera
 // riser, FOH, and the people in it. Used by the Panel Stage build and the overview.
 // Built in local coordinates (origin = deck front centre, facing +z) inside a
 // group placed at `origin`.
 import * as THREE from 'three';
-import { stage as S, access as AC, furniture as FU, seating as SEAT, qaMics, cameraRiser as CR, foh as FOH } from '../../config/panel.config.js';
-import { palette as P, assets as MAIN_ASSETS } from '../../stage.config.js';
+import { stage as S, access as AC, furniture as FU, seating as SEAT, qaMics, cameraRiser as CR, foh as FOH, dressing as DR } from '../../config/panel.config.js';
+import { palette as P } from '../../stage.config.js';
 import { toon, flat, box, stickerPanel, starSticker, canvasTexture, drawSparkle, polyline, OUTLINE, FONT_DISPLAY } from '../sticker.js';
 import { makeSlot, labelPlaceholder } from '../slots.js';
 import { theatreSeating } from './seating.js';
 import { crowd, figure, colorPicker, mulberry32 } from './figures.js';
 import { boxTruss, trussTower, fixtures as rigFixtures, stairs, stickerCard } from './rig.js';
+import { headerBox, logoSign, hangingSparkles, speechBubble, paWraps, neonStrips } from './stageStyle.js';
+import { room as ROOM } from '../../config/ballroom.config.js';
 
 const DARK_DECK = '#2b292d';
 const frameZ = -S.deck.depth + S.frame.setback;           // frame centre plane
@@ -23,7 +26,7 @@ export const PANEL_ARTWORK = {
   panelImagL: { title: 'IMAG left',         accept: 'image/*,video/*', kind: 'Image or video' },
   panelImagR: { title: 'IMAG right',        accept: 'image/*,video/*', kind: 'Image or video' },
   panelSkirt: { title: 'Table skirt print', accept: 'image/*',         kind: 'Image' },
-  panelLogo:  { title: 'OPF logo lightbox', accept: 'image/*',         kind: 'Image' },
+  panelLogo:  { title: 'OPF logo sign',     accept: 'image/*',         kind: 'Image' },
 };
 
 const m = (v) => `${+v.toFixed(2)} m`;
@@ -229,33 +232,39 @@ export function buildPanelZone({ origin = new THREE.Vector3(), seed = 480 } = {}
   g.add(halo);
   glows.push(halo);
 
-  // OPF logo lightbox on top of the header (supplied logo only, shown whole)
-  const LG = S.logo;
-  const lb = new THREE.Group();
-  lb.position.set(0, LG.top - LG.height / 2, frameFront + LG.depth / 2 + 0.02);
-  lb.add(box(LG.width, LG.height, LG.depth, toon(P.white)));
-  const lbShadow = box(LG.width, LG.height, 0.05, toon(P.dark), { edges: false });
-  lbShadow.position.set(0.1, -0.1, -LG.depth / 2 - 0.01);
-  lb.add(lbShadow);
-  const logo = makeSlot('panelLogo', {
-    w: LG.width - 0.06, h: LG.height - 0.06, bg: P.white, padding: 0.08,
-    assets: MAIN_ASSETS.logo,
-    placeholder: labelPlaceholder('OPF LOGO', 'LIGHTBOX · SUPPLIED FILE ONLY', null, { bg: P.white, card: P.white }),
-  });
-  logo.group.position.z = LG.depth / 2 + 0.002;
-  lb.add(logo.group);
-  g.add(lb);
-  slotsReady.push(logo.ready);
-
-  // Truss: goalpost at the deck front + one behind the frame, 6 lights on the front beam
+  // Truss: goalpost at the deck front + one behind the frame
   const T = S.truss;
   const backZ = frameZ - 0.5;
   g.add(boxTruss({ top: T.top, size: T.size, span: T.span, zs: [T.frontZ, backZ] }));
+
+  // Printed header box on the top beams + die-cut OPF logo on its front (main stage style)
+  const HB = S.headerBox;
+  const hbox = headerBox({ top: T.top, size: T.size, span: T.span, zs: [T.frontZ, backZ], height: HB.height, depth: HB.depth, theme: HB.theme });
+  g.add(hbox.group);
+  const LG = S.logo;
+  const logoZ = hbox.frontZ + LG.standoff + LG.thickness / 2;
+  const logo = logoSign('panelLogo', { width: LG.width, maxHeight: LG.maxHeight, headerTop: T.top, drop: LG.drop, z: logoZ,
+    thickness: LG.thickness, border: LG.border, board: LG.board, ceiling: ROOM.ceiling });
+  g.add(logo.group);
+  slotsReady.push(logo.ready);
+
+  // 6 lights under the front header
   const n = T.lights, span = T.span - 2.4;
   const xs = Array.from({ length: n }, (_, i) => -span / 2 + (span * i) / (n - 1));
   // odd heads wash the panel table across its length, even heads sweep the audience
   const targets = xs.map((x, i) => (i % 2 ? new THREE.Vector3(x * 0.62, D.height, FU.table.z + 0.8) : new THREE.Vector3(x * 1.3, 0, 7)));
-  const fx = rigFixtures(g, { xs, y: T.top - T.size, z: T.frontZ, targets, origin, colors: [P.pink, P.cyan, P.yellow] });
+  const fx = rigFixtures(g, { xs, y: hbox.bottom, z: T.frontZ, targets, origin, colors: [P.pink, P.cyan, P.yellow] });
+
+  // Hanging die-cut sparkles, speech bubble, night neon
+  g.add(hangingSparkles(DR.sparkles, hbox.bottom));
+  const B = DR.bubble;
+  const bubble = speechBubble(B.text, B.width, { board: B.board, edge: B.edge, tail: B.tail });
+  bubble.position.set(B.x, B.y, B.z);
+  bubble.rotation.y = -0.25;
+  g.add(bubble);
+  const neon = neonStrips({ xMax: hbox.xMax, top: T.top, bottom: hbox.bottom, frontZ: hbox.frontZ, deckWidth: D.width, deckHeight: D.height, colors: DR.neon });
+  g.add(neon.group);
+  glows.push(...neon.glows);
 
   // IMAG screens on truss towers either side
   const I = S.imag;
@@ -283,6 +292,7 @@ export function buildPanelZone({ origin = new THREE.Vector3(), seed = 480 } = {}
   // PA stacks outside the IMAG towers' feet, ground-stacked
   for (const side of [-1, 1]) {
     const pa = paStack();
+    pa.add(paWraps({ width: S.pa.width, depth: S.pa.depth, heights: S.pa.heights, colors: DR.paWraps.colors, labels: DR.paWraps.labels }));
     pa.position.set(side * S.pa.x, 0, S.pa.z);
     g.add(pa);
   }
@@ -302,7 +312,7 @@ export function buildPanelZone({ origin = new THREE.Vector3(), seed = 480 } = {}
   const frameSparkZ = frameFront + 0.3;
   for (const [x, y, z, size, c] of [
     [-D.width / 2 + 0.2, F.top - 0.1, frameSparkZ + 0.3, 1.2, P.yellow],
-    [LG.width / 2 + 0.5, LG.top - 0.1, frameFront + LG.depth + 0.1, 0.45, P.cyan],
+    [LG.width / 2 + 0.35, T.top + 0.35, logoZ + 0.1, 0.45, P.cyan],
     [L.width / 2 + 0.05, L.bottom + 0.05, ledZ + 0.25, 0.7, P.pink],
   ]) {
     const st = starSticker(size, c);
@@ -434,8 +444,10 @@ export function buildPanelZone({ origin = new THREE.Vector3(), seed = 480 } = {}
       lines: [`${L.width} × ${L.height} m · 16:9`, `Bottom ${m(L.bottom)} · clears seated panelists`, 'Emissive texture slot'] },
     { id: 'frame', pos: [-D.width / 2 + 0.3, F.top - H.height - 0.4, frameFront + 0.05], title: 'Sticker-card frame',
       lines: [`White, full stage width ${m(D.width)}`, `Top ${m(F.top)} · pink offset layer`, `Header box ${m(H.height)} · cyan/dark checkerboard`] },
-    { id: 'logo', pos: [LG.width / 2 + 0.2, LG.top, frameFront + LG.depth], title: 'OPF logo lightbox',
-      lines: [`Top edge ${m(LG.top)}`, `≈ ${LG.width} × ${LG.height} m (est.)`, 'Supplied logo only, shown whole'] },
+    { id: 'logo', pos: [LG.width / 2 + 0.2, T.top + 0.4, logoZ], title: 'OPF logo sign',
+      lines: [`Die-cut board ≈ ${m(LG.width)} wide (est.)`, 'On the truss header, as on the main stage', 'Supplied logo only, shown whole'] },
+    { id: 'hbox', pos: [-hbox.xMax + 0.3, T.top - 0.2, hbox.frontZ], title: 'Truss header box',
+      lines: [`${m(HB.height)} printed cladding on all four top beams`, 'Main stage style · panel print (pink checker)', 'Lights hang under the front header'] },
     { id: 'truss', pos: [-T.span / 2 + 0.2, T.top, T.frontZ], title: 'Box truss',
       lines: [`Top ${m(T.top)} · ground-supported`, `≈ ${m(T.span)} wide (est.)`, `${T.lights} lights on the front beam`, 'No ceiling rigging'] },
     { id: 'imag', pos: [I.x - I.width / 2, I.bottom + I.height + 0.3, I.z], title: 'IMAG screens',
