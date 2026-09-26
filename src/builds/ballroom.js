@@ -141,7 +141,7 @@ export default {
         onNight: room.setNight,
       },
       slotsReady: [...panel.slotsReady, ...mini.slotsReady, ...arch.slotsReady],
-      otherLogos: { panel: panel.logoSign, mini: mini.logoSign },   // logos where each stage's admin moved them
+      otherLogos: { panel: panel.logoSign, mini: mini.logoSign, arch: arch.logoSign },   // logos where each page's admin moved them
       counts: { seats: panel.counts.seats + mini.counts.seats, seated: seatedCount, standing: standingCount },
       visibility(state, { plan }) {
         room.ceiling.visible = state.ceiling && !plan;

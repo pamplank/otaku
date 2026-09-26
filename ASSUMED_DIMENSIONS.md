@@ -86,14 +86,14 @@ mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer 
 
 Flow arrows (overview) now all run foyer → through the arch → main doors, then split to each zone (`flows`).
 
-### Arch redesign (KV palette)
+### Arch design (as the OPF entrance arch)
 
 | Item | Assumed | Config |
 |---|---|---|
-| Palette (sampled from the OPF 2027 KV) | hot pink #F12B83 base, magenta #ED49BC halftone, purple #5A50F0 ribbon / sides / kick strip, violet #8233E6 chevrons, yellow #FFF02D slab / offset, mint #00CE92 edge tickers, OPF dark outline | `archPalette` |
-| Face layout | purple header ribbon 0.26–1.26 m from the top (slight tilt) with the supplied logo left and the "BALLROOM" sticker title + yellow subtitle pill right; diagonal yellow slab on the left leg; 0.3 m mint "OTAKU POP FES" tickers on the outer edges; 0.28 m purple kick strip; white rim around the opening | `src/ballroom/archZone.js` |
-| Sides | outer sides printed (pink halftone, mint ticker, purple kick); depth faces and opening walls purple; yellow offset layer behind | `arch.offset` |
-| Graphic language only | colours, halftone, chevrons, sparkle bursts, music-note doodles — no KV character art is reproduced | — |
+| Print | teal with light-teal checker patches on the lower legs and header ends, white swooshes, navy corner wedges with small stars (the OPF entrance arch on site / the main stage header) | `src/ballroom/archZone.js` |
+| OPF logo | die-cut sign ≈ 4.6 m wide (max 1.25 high) on the header front, bottom edge 0.7 below the arch top, so it stands up above the header; movable in admin mode, kept under the 5 m foyer ceiling | `arch.logo` |
+| Room name | navy strip "BALLROOM · PANEL STAGE · MINI STAGE", 5.2 × 0.34, under the logo | `arch.title`, `arch.subtitle` |
+| Offset layer | none (as on site) | `arch.offset` |
 
 ## Step 5 · IP Booths Plan A / B / C (`config/booths.config.js`)
 
