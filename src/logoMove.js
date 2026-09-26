@@ -33,7 +33,7 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, setState })
     <label class="art-slider"><span>Size</span>
       <input type="range" name="scale" min="${SCALE_RANGE[0]}" max="${SCALE_RANGE[1]}" step="0.05" /><output></output></label>
     <label class="art-slider"><span>Forward / back</span>
-      <input type="range" name="z" min="${Z_RANGE[0]}" max="${Z_RANGE[1]}" step="0.05" /><output></output></label>
+      <input type="range" name="z" min="${(sign.limits?.zRange ?? Z_RANGE)[0]}" max="${(sign.limits?.zRange ?? Z_RANGE)[1]}" step="0.05" /><output></output></label>
     <p class="art-pos"></p>
     <p class="art-pos-note">Changes are published to everyone.</p>`;
   row.append(ui);
@@ -52,14 +52,16 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, setState })
   hint.querySelector('button').addEventListener('click', () => setMoving(false));
 
   const current = () => ({ ...sign.defaults(), ...sign.pose });
+  // Limits: the main stage's by default; other stages pass their own (in the sign's local coordinates).
+  const lim = { ceiling: S.ceiling.height, xLimit: X_LIMIT, zRange: Z_RANGE, ...sign.limits };
 
   // Keep the sign above the floor and under the ceiling, within the hall.
   function clamp(p) {
     const half = (sign.height * p.scale) / 2;
-    const yMax = S.ceiling.height - 0.15 - half;
-    p.x = THREE.MathUtils.clamp(p.x, -X_LIMIT, X_LIMIT);
+    const yMax = lim.ceiling - 0.15 - half;
+    p.x = THREE.MathUtils.clamp(p.x, -lim.xLimit, lim.xLimit);
     p.y = THREE.MathUtils.clamp(p.y, half, Math.max(half, yMax));
-    p.z = THREE.MathUtils.clamp(p.z, Z_RANGE[0], Z_RANGE[1]);
+    p.z = THREE.MathUtils.clamp(p.z, lim.zRange[0], lim.zRange[1]);
     p.scale = THREE.MathUtils.clamp(p.scale, SCALE_RANGE[0], SCALE_RANGE[1]);
     return p;
   }
@@ -114,6 +116,7 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, setState })
   }
   moveBtn.addEventListener('click', () => setMoving(!moving));
 
+  const toLocal = (v) => (sign.group.parent ? sign.group.parent.worldToLocal(v) : v);
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
@@ -136,8 +139,11 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, setState })
     if (!moving || e.target !== canvas || e.button !== 0 || !overSign(e)) return;
     e.stopPropagation();
     const p = current();
-    plane.constant = -p.z; // the sign's own vertical plane
+    const parent = sign.group.parent;
+    const wp = parent ? parent.localToWorld(new THREE.Vector3(p.x, p.y, p.z)) : new THREE.Vector3(p.x, p.y, p.z);
+    plane.constant = -wp.z; // the sign's own vertical plane
     if (!ray.ray.intersectPlane(plane, hitPoint)) return;
+    toLocal(hitPoint);
     grab.set(p.x, p.y, p.z).sub(hitPoint);
     dragId = e.pointerId;
     canvas.setPointerCapture(e.pointerId);
@@ -154,7 +160,7 @@ export function setupLogoMove({ canvas, camera, controls, sign, row, setState })
     if (e.pointerId !== dragId) return;
     aim(e);
     if (!ray.ray.intersectPlane(plane, hitPoint)) return;
-    hitPoint.add(grab);
+    toLocal(hitPoint).add(grab);
     setPose({ x: hitPoint.x, y: hitPoint.y }, false);
   });
 

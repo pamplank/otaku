@@ -32,10 +32,9 @@ export function presets() {
   };
 }
 
-export function createCameraRig(camera, controls) {
-  const P = presets();
+export function createCameraRig(camera, controls, P = presets()) {
   let tween = null;
-  let current = 'foh';
+  let current = Object.keys(P)[0];
   const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
   function go(name, instant = false) {

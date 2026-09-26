@@ -1,5 +1,10 @@
 // Client for the shared state (/api): the artwork in each slot and the logo pose,
 // the same for everyone who opens the site. Only admin mode can change it.
+// Each build (main stage, panel stage, booths…) has its own state.
+
+let build = 'main';
+export const setBuild = (id) => { build = id; };
+const q = (id = build) => (id === 'main' ? '' : `?build=${encodeURIComponent(id)}`);
 
 async function call(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
@@ -16,11 +21,12 @@ async function call(path, { method = 'GET', body } = {}) {
 }
 
 // { slots: { led: {url, name, type, path}, … }, logoPose, updatedAt, configured } or null
-export async function fetchState() {
-  try { return await call('/api/state'); } catch { return null; }
+// id: another build's state (the overview shows each stage's published artwork)
+export async function fetchState(id) {
+  try { return await call(`/api/state${q(id)}`); } catch { return null; }
 }
 
-export const saveState = (patch) => call('/api/state', { method: 'PUT', body: patch });
+export const saveState = (patch) => call(`/api/state${q()}`, { method: 'PUT', body: patch });
 
 // { admin, enabled, storage }; a site without the API reads as "no admin mode"
 export async function adminStatus() {
@@ -31,7 +37,7 @@ export const logout = () => call('/api/admin', { method: 'DELETE' });
 
 // Upload a file straight to storage; returns the slot entry to save in the state.
 export async function uploadFile(slot, file) {
-  const target = await call('/api/upload', { method: 'POST', body: { slot, name: file.name, type: file.type } });
+  const target = await call(`/api/upload${q()}`, { method: 'POST', body: { slot, name: file.name, type: file.type } });
   let body = file;
   const headers = {};
   if (target.form) {

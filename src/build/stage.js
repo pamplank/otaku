@@ -9,7 +9,7 @@ import { makeSlot, makeCutoutSlot, placeholders } from '../slots.js';
 const TRUSS_COLOR = '#c9ced3';
 
 // Box truss section along X, centred, length `len`, square section `s`.
-function trussGeometry(len, s) {
+export function trussGeometry(len, s) {
   const parts = [];
   const r = 0.028;
   const h = s / 2 - r;

@@ -7,7 +7,7 @@ import { toon, hullMaterial } from '../sticker.js';
 import { presets } from '../cameras.js';
 
 // 1.70 m tall figure, feet at y = 0.
-function figureGeometry() {
+export function figureGeometry() {
   const body = new THREE.CapsuleGeometry(0.19, 1.04, 6, 12);
   body.translate(0, 0.71, 0);
   const head = new THREE.SphereGeometry(0.13, 16, 12);
@@ -15,7 +15,7 @@ function figureGeometry() {
   return mergeGeometries([body, head]);
 }
 
-function mulberry32(a) {
+export function mulberry32(a) {
   return () => {
     a |= 0; a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);

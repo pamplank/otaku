@@ -15,6 +15,8 @@
       <canvas id="scene" aria-label="3D model of the Main Stage in the Crystal Pavilion"></canvas>
       <div id="labels"></div>
 
+      <nav class="switcher" id="switcher" aria-label="Stages and booths"></nav>
+
       <div class="left-col">
         <header class="card title-card">
           <span class="sparkle" aria-hidden="true"></span>
@@ -62,23 +64,9 @@
         </form>
       </div>
 
-      <div class="toggles" role="group" aria-label="View options">
-        <button class="chip chip-night" data-toggle="night" aria-pressed="false" type="button">
-          <span class="ico" aria-hidden="true"></span><span class="lbl">Day</span>
-        </button>
-        <button class="chip" data-toggle="labels" aria-pressed="true" type="button">Labels</button>
-        <button class="chip" data-toggle="people" aria-pressed="true" type="button">People</button>
-        <button class="chip" data-toggle="ceiling" aria-pressed="true" type="button">Ceiling 7.6 m</button>
-        <button class="chip" data-toggle="roof" aria-pressed="true" type="button">Hall roof</button>
-      </div>
+      <div class="toggles" role="group" aria-label="View options"></div>
 
-      <nav class="presets" aria-label="Camera presets">
-        <button data-preset="foh" aria-pressed="true" type="button"><kbd>1</kbd>Front of house</button>
-        <button data-preset="crowd" aria-pressed="false" type="button"><kbd>2</kbd>Crowd eye level</button>
-        <button data-preset="side" aria-pressed="false" type="button"><kbd>3</kbd>Side</button>
-        <button data-preset="plan" aria-pressed="false" type="button"><kbd>4</kbd>Top-down plan</button>
-        <button data-preset="wide" aria-pressed="false" type="button"><kbd>5</kbd>Wide hall</button>
-      </nav>
+      <nav class="presets" aria-label="Camera presets"></nav>
 
       <p class="hint">Drag to orbit · right-drag to pan · scroll to zoom · N day/night</p>
     </div>

@@ -35,15 +35,18 @@ const beamFrag = /* glsl */ `
     gl_FragColor = vec4(color * a, a);
   }`;
 
-export function buildLighting(scene, { fixtures, glassMats, shellLines, glows = [] }) {
+// Options (defaults = the main stage): sun { pos, target, extent } for the shadow
+// area, spill { pos } for the LED's night light (null = none), onNight(on) hook.
+export function buildLighting(scene, { fixtures, glassMats = [], shellLines = [], glows = [], sun: sunOpt = {}, spill: spillOpt = {}, onNight } = {}) {
   const bg = { day: gradient('#cfe8ee', '#f4f0e8'), night: gradient('#0d0b10', '#221d29') };
 
   const amb = new THREE.AmbientLight('#ffffff', 1.6);
   const sun = new THREE.DirectionalLight('#ffffff', 1.55);
-  sun.position.set(-14, 26, 24);
-  sun.target.position.set(0, 0, 2);
+  const ext = sunOpt.extent ?? 32;
+  sun.position.set(...(sunOpt.pos ?? [-14, 26, 24]));
+  sun.target.position.set(...(sunOpt.target ?? [0, 0, 2]));
   sun.castShadow = true;
-  Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 100 });
+  Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 1, far: sunOpt.far ?? 100 });
   sun.shadow.mapSize.set(4096, 4096);
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.03;
@@ -51,8 +54,8 @@ export function buildLighting(scene, { fixtures, glassMats, shellLines, glows = 
 
   // LED spill onto deck/performers at night
   const spill = new THREE.PointLight('#ffc0e0', 0, 12, 1.6);
-  spill.position.set(0, 3, -3.2);
-  scene.add(spill);
+  spill.position.set(...(spillOpt?.pos ?? [0, 3, -3.2]));
+  if (spillOpt !== null) scene.add(spill);
 
   // Beams + spots per fixture
   const beamTan = 0.11;
@@ -103,7 +106,7 @@ export function buildLighting(scene, { fixtures, glassMats, shellLines, glows = 
     amb.intensity = on ? 0.55 : 1.6;
     sun.color.set(on ? '#8aa0ff' : '#ffffff');
     sun.intensity = on ? 0.25 : 1.55;
-    spill.intensity = on ? 9 : 0;
+    spill.intensity = on ? (spillOpt?.intensity ?? 9) : 0;
     for (const r of rigs) {
       r.beam.visible = on;
       r.spot.intensity = on ? 55 : 0;
@@ -111,11 +114,14 @@ export function buildLighting(scene, { fixtures, glassMats, shellLines, glows = 
       if (on) r.lensMat.color.multiplyScalar(1.8);
     }
     for (const gl of glows) gl.visible = on;
-    glassMats[0].opacity = on ? 0.07 : 0.16;
-    glassMats[1].opacity = on ? 0.14 : 0.3;
-    glassMats[2].opacity = on ? 0.05 : 0.1;
+    if (glassMats.length === 3) { // Crystal Pavilion glass shell
+      glassMats[0].opacity = on ? 0.07 : 0.16;
+      glassMats[1].opacity = on ? 0.14 : 0.3;
+      glassMats[2].opacity = on ? 0.05 : 0.1;
+    }
     for (const m of glassMats) m.color.set(on ? '#3b4a66' : '#bfe8ef');
     for (const m of shellLines) m.color.set(on ? '#4a5570' : '#8fa9b2');
+    onNight?.(on);
     aim(0);
   }
 

@@ -16,7 +16,26 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const BUCKET = 'stage';
-const STATE_PATH = 'state.json';
+
+// One shared state per build. The main stage keeps its original file name.
+export const BUILDS = ['main', 'ballroom', 'panel', 'mini', 'arch', 'booth-a', 'booth-b', 'booth-c', 'zone'];
+const isPreview = () => process.env.VERCEL_ENV === 'preview';
+const stateFile = (build) => (build === 'main' ? 'state.json' : `state-${build}.json`);
+// Preview deployments save to their own files (and read production's until they
+// have one), so trying things on a preview never changes the live site.
+const writePath = (build) => (isPreview() ? `preview/${stateFile(build)}` : stateFile(build));
+const readPaths = (build) => (isPreview() ? [`preview/${stateFile(build)}`, stateFile(build)] : [stateFile(build)]);
+
+// ?build=… on the request (main by default); null if it isn't a known build.
+export function buildOf(request) {
+  const b = new URL(request.url).searchParams.get('build') || 'main';
+  return BUILDS.includes(b) ? b : null;
+}
+
+// Where an uploaded file goes (main keeps its original layout).
+export function uploadDir(build, slot) {
+  return ['uploads', isPreview() && 'preview', build !== 'main' && build, slot].filter(Boolean).join('/');
+}
 const ADMIN_COOKIE = 'opf_admin';
 const DEV_PASSCODE = 'opf-admin';
 export const EMPTY_STATE = { version: 1, slots: {}, logoPose: null, updatedAt: null };
@@ -94,18 +113,18 @@ function supabaseStore() {
 
   return {
     kind: 'supabase',
-    async readState() {
-      const { data, error } = await bucket().download(STATE_PATH);
-      if (error) {
-        if (/not.?found|does not exist|404/i.test(`${error.message} ${error.statusCode ?? ''}`)) return { ...EMPTY_STATE };
-        throw error;
+    async readState(build = 'main') {
+      for (const file of readPaths(build)) {
+        const { data, error } = await bucket().download(file);
+        if (!error) return JSON.parse(await data.text());
+        if (!/not.?found|does not exist|404|400/i.test(`${error.message} ${error.statusCode ?? ''}`)) throw error;
       }
-      return JSON.parse(await data.text());
+      return { ...EMPTY_STATE };
     },
-    async writeState(state) {
+    async writeState(state, build = 'main') {
       await ensureBucket();
       const body = new Blob([JSON.stringify(state)], { type: 'application/json' });
-      const { error } = await bucket().upload(STATE_PATH, body, { upsert: true, contentType: 'application/json', cacheControl: '0' });
+      const { error } = await bucket().upload(writePath(build), body, { upsert: true, contentType: 'application/json', cacheControl: '0' });
       if (error) throw error;
     },
     async uploadTarget(filePath) {
@@ -121,15 +140,14 @@ function supabaseStore() {
 // Local folder store for the Vite dev server (see vite.config.js).
 function devStore() {
   const root = path.resolve('.dev-store');
-  const statePath = path.join(root, STATE_PATH);
   return {
     kind: 'local',
-    async readState() {
-      try { return JSON.parse(await fs.readFile(statePath, 'utf8')); } catch { return { ...EMPTY_STATE }; }
+    async readState(build = 'main') {
+      try { return JSON.parse(await fs.readFile(path.join(root, stateFile(build)), 'utf8')); } catch { return { ...EMPTY_STATE }; }
     },
-    async writeState(state) {
+    async writeState(state, build = 'main') {
       await fs.mkdir(root, { recursive: true });
-      await fs.writeFile(statePath, JSON.stringify(state, null, 2));
+      await fs.writeFile(path.join(root, stateFile(build)), JSON.stringify(state, null, 2));
     },
     async uploadTarget(filePath) {
       return { url: `/__dev-store/upload?path=${encodeURIComponent(filePath)}`, method: 'PUT' };
@@ -146,6 +164,8 @@ export function getStore() {
 
 // ─── State validation ───────────────────────────────────────────────────────
 export const SLOT_KEYS = ['led', 'wingLeft', 'wingRight', 'logo'];
+// Main stage: its four slots. Other builds: any short camelCase slot name.
+export const validSlot = (build, key) => (build === 'main' ? SLOT_KEYS.includes(key) : /^[a-zA-Z][a-zA-Z0-9]{0,31}$/.test(key));
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
 
 export function cleanSlot(entry) {
