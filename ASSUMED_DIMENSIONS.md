@@ -109,3 +109,25 @@ Given in the brief: Plan A 6 × 6 m, 100 mm timber platform, KV 3.9 × 3.0 m, co
 | Staff role tags | 2.05 above the floor (Plan A adds the 0.1 platform) | `src/booths/common.js` |
 
 Artwork slots (all "IP ARTWORK – SUPPLIED BY CYBERE" until uploaded): Plan A KV + counter front · Plan B panels 1–3, photo panel, RR title intro panel · Plan C backdrop. The main experience volume and the standees stay neutral placeholders (no artwork slot).
+
+## Step 6 · IP Booth Zone (`config/zone.config.js`)
+
+No zoning drawing was supplied, so the arc is laid out from the brief ("Artist Alley, Food, Sponsors, Stage, IP Booths" around the Fountain). Everything below is assumed:
+
+| Item | Assumed | Config |
+|---|---|---|
+| Fountain | 28 × 12 m ellipse, 16 m beyond the hall's front edge (same as the main stage model) → centre ≈ (0.9, 39) | `fountain` |
+| Zoning arc | annular sectors 20–84 m out from the Fountain, left → right as listed | `arc.inner`, `arc.outer` |
+| Sector angles (0° = straight at the stage, + = audience right) | Artist Alley −112°…−82° · Food −82°…−57° · Sponsors −57°…−35° · Stage −35°…35° · IP Booths 35°…98° | `arc.zones` |
+| Stage zone | main stage exactly as `/main` (stage, dressing, crowd), with its viewing pocket, pit and barricade | `stage.config.js` |
+| Booth mix (placeholder) | 4 × A · 8 × B · 8 × C = 20 units, marked "MIX TBC" | `mix` |
+| Unit footprints | A 6 × 6 · B 6 × 3 · C 5 × 4 (C's area assumed in step 5) | `config/booths.config.js` |
+| Rows | 4 rows balanced by frontage (each A + 2 B + 2 C = 28 m), as 2 back-to-back double rows; the back row of each pair faces away from the Fountain | `grid.rows` |
+| Booth fronts | on the aisle; the shallower B / C units leave a void behind them in a 6 m row | `src/booths/zone.js` |
+| Aisles | 3.5 main aisles in front, between and behind the double rows, plus side aisles at both ends; 3.5 cross aisle through each row | `grid.aisle`, `grid.crossAisle` |
+| IP booth area | ≈ 38.5 × 34.5 m, centred 58 m from the Fountain at 66°, turned to face it (centre ≈ (54, 15)) | `grid.angle`, `grid.radius` |
+| Zone sign (OPF wayfinding, texture slot) | 4 × 1.2, bottom edge 2.2, on two posts over the front aisle | `zoneSign` |
+| Visitors | 90 in the booth aisles, 60 spread over Artist Alley / Food / Sponsors | `visitors` |
+| Night wash over the booth area | one soft point light 16 m up | `src/booths/zone.js` |
+
+Every booth in the zone is the same model as `/booths/a`, `/booths/b` and `/booths/c`, and shows the artwork published there, so each queue stays inside its footprint. Staff tags and Plan C's photo clearance are toggles, off by default at this scale.

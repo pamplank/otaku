@@ -110,6 +110,7 @@ export async function startViewer(build) {
   };
   const decals = [];
   for (const grp of built.decalRoots ?? built.groups) grp.traverse((o) => { if (o.userData.decal) decals.push(o); });
+  applyVisibility(); // toggles that start off (e.g. staff tags in the zone) apply from the first frame
 
   const setToggle = (name, value) => {
     state[name] = value;

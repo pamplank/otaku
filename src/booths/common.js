@@ -8,7 +8,7 @@ import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js
 import { palette as P } from '../../stage.config.js';
 import { neutral as N, context as CX } from '../../config/booths.config.js';
 import { toon, box, polyline, lineMat, outline, canvasTexture, floorArrow, floorDecal, OUTLINE, OUTLINE_THIN, FONT, FONT_BODY } from '../sticker.js';
-import { makeSlot } from '../slots.js';
+import { makeSlot, customSlot } from '../slots.js';
 import { figure } from '../ballroom/figures.js';
 
 export const IP_TITLE = 'IP ARTWORK – SUPPLIED BY CYBERE';
@@ -19,6 +19,48 @@ function fit(ctx, text, maxW, px, font = FONT, weight = '') {
   ctx.font = `${weight} ${px}px ${font}`;
   const w = ctx.measureText(text).width;
   if (w > maxW) ctx.font = `${weight} ${(px * maxW) / w}px ${font}`;
+}
+
+// Textures are cached by key, so a zone with 20 booths draws each canvas once.
+const cache = new Map();
+export function memo(key, make) {
+  if (!cache.has(key)) cache.set(key, make());
+  return cache.get(key);
+}
+
+// Zone mode: every copy of a booth shares one slot per key (one upload shows
+// on all of them). Off (null) for the single-booth builds.
+let shared = null;
+export function shareSlots(on) { shared = on ? new Map() : null; }
+
+function sharedSlot(key, w, h, draw) {
+  let e = shared.get(key);
+  if (!e) {
+    const ph = canvasTexture(1024, Math.min(4096, Math.round((1024 * h) / w)), draw);
+    e = { mat: new THREE.MeshToonMaterial({ map: ph, transparent: true }), contents: [], aspect: null };
+    const fitAll = () => e.contents.forEach(fitContent);
+    const fitContent = (c) => {
+      const a = e.aspect;
+      if (!a) c.scale.set(w, h, 1);
+      else if (a > w / h) c.scale.set(w, w / a, 1);
+      else c.scale.set(h * a, h, 1);
+    };
+    e.fit = fitContent;
+    shared.set(key, e);
+    e.ready = customSlot(key, {
+      info: { width: w, height: h, aspect: w / h },
+      placeholderThumb: () => ph.image.toDataURL(),
+      apply(res) { e.mat.map = res ? res.tex : ph; e.mat.needsUpdate = true; e.aspect = res?.aspect ?? null; fitAll(); },
+    }).ready;
+  }
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), memo('slotBg', () => toon('#eceae6'))));
+  const content = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), e.mat);
+  content.position.z = 0.004;
+  e.fit(content);
+  e.contents.push(content);
+  g.add(content);
+  return { group: g, ready: e.ready };
 }
 
 // Neutral placeholder: light grey hatch, dashed border, the supplier line, size, note.
@@ -63,10 +105,9 @@ export function ipPlaceholder(size, note, title = IP_TITLE) {
 
 // A w × h texture slot facing +z with the neutral placeholder until the file is uploaded.
 export function ipSlot(key, w, h, note, title) {
-  return makeSlot(key, {
-    w, h, bg: '#eceae6', emissive: false,
-    placeholder: ipPlaceholder(`${m(w)} × ${m(h)}`.toUpperCase(), note, title),
-  });
+  const placeholder = ipPlaceholder(`${m(w)} × ${m(h)}`.toUpperCase(), note, title);
+  if (shared) return sharedSlot(key, w, h, placeholder);
+  return makeSlot(key, { w, h, bg: '#eceae6', emissive: false, placeholder });
 }
 
 // A slot on a board: the panel itself (neutral, dark outline) + the slot on its front face.
@@ -81,7 +122,16 @@ export function slotBoard(key, w, h, t, note, { color = N.shell, title } = {}) {
 }
 
 // ─── Text on a card that always faces the camera ────────────────────────────
-export function textSprite(text, { height = 0.26, bg = P.white, fg = P.dark, border = P.dark, font = FONT, weight = '' } = {}) {
+export function textSprite(text, opts = {}) {
+  const { height = 0.26 } = opts;
+  const mat = memo(`sprite|${text}|${JSON.stringify(opts)}`, () => spriteMaterial(text, opts));
+  const sp = new THREE.Sprite(mat);
+  sp.scale.set((height * mat.map.image.width) / mat.map.image.height, height, 1);
+  sp.renderOrder = 40;
+  return sp;
+}
+
+function spriteMaterial(text, { bg = P.white, fg = P.dark, border = P.dark, font = FONT, weight = '' }) {
   const pxH = 96;
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
@@ -101,10 +151,7 @@ export function textSprite(text, { height = 0.26, bg = P.white, fg = P.dark, bor
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-  sp.scale.set((height * c.width) / c.height, height, 1);
-  sp.renderOrder = 40;
-  return sp;
+  return new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
 }
 
 // ─── Staff: a figure in the lead colour + its role tag (tags are a toggle) ──
@@ -121,7 +168,7 @@ export function staffMember({ role, x, z, rot = 0 }, color, { y = 0, tags }) {
 // ─── Dimension lines ────────────────────────────────────────────────────────
 const DIM_LINE = lineMat(P.dark, 1.8);
 // From a to b (Vector3 or [x, y, z]) with end ticks along `tick`, text card at the middle.
-export function dimLine(a, b, text, { tick = [0, 0, 1], tickLen = 0.18, textOffset = [0, 0, 0] } = {}) {
+export function dimLine(a, b, text, { tick = [0, 0, 1], tickLen = 0.18, textOffset = [0, 0, 0], textHeight = 0.22 } = {}) {
   const A = new THREE.Vector3(...(a.isVector3 ? a.toArray() : a)), B = new THREE.Vector3(...(b.isVector3 ? b.toArray() : b));
   const T = new THREE.Vector3(...tick).normalize().multiplyScalar(tickLen / 2);
   const g = new THREE.Group();
@@ -134,7 +181,7 @@ export function dimLine(a, b, text, { tick = [0, 0, 1], tickLen = 0.18, textOffs
   const line = new LineSegments2(new LineSegmentsGeometry().setPositions(pos), DIM_LINE);
   line.raycast = () => {};
   g.add(line);
-  const label = textSprite(text, { height: 0.22, font: FONT_BODY, weight: 800 });
+  const label = textSprite(text, { height: textHeight, font: FONT_BODY, weight: 800 });
   label.position.copy(A).add(B).multiplyScalar(0.5).add(new THREE.Vector3(...textOffset));
   g.add(label);
   return g;
@@ -144,7 +191,7 @@ export function dimLine(a, b, text, { tick = [0, 0, 1], tickLen = 0.18, textOffs
 // Round numbered floor badge with a caption, lying flat (reads from +z).
 export function flowBadge(n, text, color, { size = 0.9, x = 0, z = 0, y = 0.012, rot = 0 } = {}) {
   const wM = size * 2.6, hM = size * 1.25;
-  const tex = canvasTexture(Math.round(wM * 200), Math.round(hM * 200), (ctx, w, h) => {
+  const tex = memo(`badge|${n}|${text}|${color}|${size}`, () => canvasTexture(Math.round(wM * 200), Math.round(hM * 200), (ctx, w, h) => {
     const r = h * 0.3;
     ctx.fillStyle = P.dark;
     ctx.beginPath(); ctx.arc(w / 2 + r * 0.12, r + h * 0.03 + r * 0.12, r, 0, Math.PI * 2); ctx.fill();
@@ -166,7 +213,7 @@ export function flowBadge(n, text, color, { size = 0.9, x = 0, z = 0, y = 0.012,
     ctx.lineWidth = h * 0.018; ctx.strokeRect((w - tw) / 2, h * 0.7, tw, h * 0.27);
     ctx.fillStyle = P.dark;
     ctx.fillText(text, w / 2, h * 0.84);
-  });
+  }));
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(wM, hM), new THREE.MeshToonMaterial({ map: tex, transparent: true, depthWrite: false }));
   mesh.rotation.set(-Math.PI / 2, 0, rot);
   mesh.position.set(x, y, z);
@@ -296,13 +343,20 @@ export function hallContext({ width, depth, lead, neighbours = true }) {
       g.add(t);
     }
   }
-  // footprint tape
-  const tapeMat = toon(lead);
-  const tw = 0.08, x = width / 2, z = depth / 2;
+  g.add(footprintTape(width, depth, lead));
+  return g;
+}
+
+// Floor tape around a booth footprint in its lead colour.
+export function footprintTape(width, depth, color, { tw = 0.08, y = 0.007 } = {}) {
+  const g = new THREE.Group();
+  const mat = memo(`tape|${color}`, () => toon(color));
+  const x = width / 2, z = depth / 2;
   for (const [cx, cz, w, d] of [[0, -z, width + tw, tw], [0, z, width + tw, tw], [-x, 0, tw, depth], [x, 0, tw, depth]]) {
-    const t = new THREE.Mesh(new THREE.PlaneGeometry(w, d), tapeMat);
+    const t = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
     t.rotation.x = -Math.PI / 2;
-    t.position.set(cx, 0.007, cz);
+    t.position.set(cx, y, cz);
+    t.receiveShadow = true;
     g.add(t);
   }
   return g;

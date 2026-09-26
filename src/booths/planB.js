@@ -9,7 +9,7 @@ import { palette as P } from '../../stage.config.js';
 import { planB as B, neutral as N } from '../../config/booths.config.js';
 import { toon, box, canvasTexture, FONT } from '../sticker.js';
 import { crowd, colorPicker, mulberry32 } from '../ballroom/figures.js';
-import { m, slotBoard, staffMember, flowArrows, dimLine, footprintDims } from './common.js';
+import { m, memo, slotBoard, staffMember, flowArrows, dimLine, footprintDims } from './common.js';
 
 export const BOOTH_B_ARTWORK = {
   boothBPanel1: { title: 'Plan B · exhibition panel 1 (CyberE)', accept: 'image/*', kind: 'Image' },
@@ -22,14 +22,14 @@ export const BOOTH_B_ARTWORK = {
 // Round numbered read-order marker (RR ADDS), a sticker disc facing +z
 function marker(n, size, color) {
   const g = new THREE.Group();
-  const tex = canvasTexture(256, 256, (ctx, w, h) => {
+  const tex = memo(`marker|${n}|${color}`, () => canvasTexture(256, 256, (ctx, w, h) => {
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(w / 2, h / 2, w * 0.46, 0, Math.PI * 2); ctx.fill();
     ctx.lineWidth = w * 0.05; ctx.strokeStyle = P.dark; ctx.stroke();
     ctx.fillStyle = P.dark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `${w * 0.52}px ${FONT}`;
     ctx.fillText(String(n), w / 2, h * 0.54);
-  });
+  }));
   const face = new THREE.Mesh(new THREE.CircleGeometry(size / 2, 32), toon('#ffffff', { map: tex, transparent: true }));
   const off = new THREE.Mesh(new THREE.CircleGeometry(size / 2, 32), toon(P.dark));
   off.position.set(size * 0.08, -size * 0.08, -0.004);
@@ -39,7 +39,7 @@ function marker(n, size, color) {
 
 // "STAND HERE" floor cue (RR ADDS): two footprints in a ring
 function standHere(size, color) {
-  const tex = canvasTexture(512, 512, (ctx, w, h) => {
+  const tex = memo(`standHere|${color}`, () => canvasTexture(512, 512, (ctx, w, h) => {
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(w / 2, h / 2, w * 0.47, 0, Math.PI * 2); ctx.fill();
     ctx.lineWidth = w * 0.03; ctx.strokeStyle = P.dark; ctx.stroke();
@@ -50,7 +50,7 @@ function standHere(size, color) {
     ctx.fillStyle = P.dark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `${w * 0.1}px ${FONT}`;
     ctx.fillText('STAND HERE', w / 2, h * 0.72);
-  });
+  }));
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshToonMaterial({ map: tex, transparent: true, depthWrite: false }));
   mesh.rotation.x = -Math.PI / 2;
   mesh.renderOrder = 3;

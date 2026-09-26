@@ -9,7 +9,7 @@ export const BUILDS = [
   { id: 'booth-a', group: 'Booths', name: 'Plan A', where: 'Hosted exhibition', path: '/booths/a', load: () => import('./boothA.js') },
   { id: 'booth-b', group: 'Booths', name: 'Plan B', where: 'Exhibition + photo', path: '/booths/b', load: () => import('./boothB.js') },
   { id: 'booth-c', group: 'Booths', name: 'Plan C', where: 'Photo spot', path: '/booths/c', load: () => import('./boothC.js') },
-  { id: 'zone', group: 'Booths', name: 'IP Booth Zone', where: 'Crystal Pavilion', path: '/booths/zone', step: 6 },
+  { id: 'zone', group: 'Booths', name: 'IP Booth Zone', where: 'Crystal Pavilion', path: '/booths/zone', load: () => import('./zone.js') },
 ];
 
 // "/" and "/main" open the main stage; unknown paths fall back to it too.

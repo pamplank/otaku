@@ -8,7 +8,7 @@ import { planA as A, neutral as N } from '../../config/booths.config.js';
 import { toon, box, canvasTexture, OUTLINE_THIN, FONT, FONT_BODY } from '../sticker.js';
 import { crowd, colorPicker, mulberry32 } from '../ballroom/figures.js';
 import { queueLane } from '../ballroom/rig.js';
-import { m, mm, slotBoard, ipSlot, staffMember, flowBadge, flowArrows, dimLine, footprintDims } from './common.js';
+import { m, mm, memo, slotBoard, ipSlot, staffMember, flowBadge, flowArrows, dimLine, footprintDims } from './common.js';
 
 export const BOOTH_A_ARTWORK = {
   boothAKv:      { title: 'Plan A · KV back wall (CyberE)', accept: 'image/*', kind: 'Image' },
@@ -17,7 +17,7 @@ export const BOOTH_A_ARTWORK = {
 
 // Plank texture for the timber platform top
 function planks(w, d) {
-  return canvasTexture(1024, Math.round((1024 * d) / w), (ctx, cw, ch) => {
+  return memo(`planks|${w}|${d}`, () => canvasTexture(1024, Math.round((1024 * d) / w), (ctx, cw, ch) => {
     ctx.fillStyle = '#d8b88a';
     ctx.fillRect(0, 0, cw, ch);
     const n = Math.round(w / 0.2);
@@ -27,12 +27,12 @@ function planks(w, d) {
       ctx.fillStyle = '#b8966a';
       ctx.fillRect((i * cw) / n, 0, 2, ch);
     }
-  });
+  }));
 }
 
 // "MAIN EXPERIENCE – BUILD PER SUPPLIED DRAWINGS" face
 function experienceFace(wM, hM) {
-  return canvasTexture(Math.round(wM * 220), Math.round(hM * 220), (ctx, w, h) => {
+  return memo(`exp|${wM}|${hM}`, () => canvasTexture(Math.round(wM * 220), Math.round(hM * 220), (ctx, w, h) => {
     ctx.fillStyle = N.volume;
     ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = '#c4c0bb';
@@ -58,11 +58,11 @@ function experienceFace(wM, hM) {
     ctx.font = `700 ${h * 0.045}px ${FONT_BODY}`;
     ctx.fillStyle = '#5b585c';
     ctx.fillText(`PLACEHOLDER VOLUME · ${m(wM)} × ${m(hM)} FACE · CYBERE / JAPAN`, w / 2, by + bh + h * 0.06, w * 0.9);
-  });
+  }));
 }
 
 function signPlane(text, w, h, bg = P.dark, fg = P.white) {
-  const tex = canvasTexture(Math.round(w * 400), Math.round(h * 400), (ctx, cw, ch) => {
+  const tex = memo(`sign|${text}|${w}|${h}|${bg}`, () => canvasTexture(Math.round(w * 400), Math.round(h * 400), (ctx, cw, ch) => {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, cw, ch);
     ctx.fillStyle = fg;
@@ -70,7 +70,7 @@ function signPlane(text, w, h, bg = P.dark, fg = P.white) {
     ctx.textBaseline = 'middle';
     ctx.font = `${ch * 0.6}px ${FONT}`;
     ctx.fillText(text, cw / 2, ch * 0.55, cw * 0.9);
-  });
+  }));
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), toon('#ffffff', { map: tex }));
 }
 
