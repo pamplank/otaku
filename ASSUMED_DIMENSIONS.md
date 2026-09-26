@@ -29,7 +29,9 @@ mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer 
 |---|---|---|
 | Sticker-card frame: top / setback from the deck's back edge / thickness | 6.4 / 0.4 / 0.12 | `stage.frame` |
 | Header box (cyan/dark checkerboard): height / depth / square | 0.65 / 0.5 / 0.22 (bottom 5.75, clears the LED top at 5.575) | `stage.header` |
-| OPF logo lightbox: size / depth | 3.2 × 0.8 / 0.3 (top edge 7.2 as given) | `stage.logo` |
+| OPF logo (main stage style, replaces the lightbox) | die-cut sign ≈ 4.6 m wide (max 1.3 high), bottom edge 0.5 below the truss top, on the header front | `stage.logo` |
+| Truss header box (main stage style) | 1.0 high × 0.5 deep printed cladding on all four top beams; pink print, light-pink checker ends; lights hang under it | `stage.headerBox` |
+| Dressing (main stage style) | 6 hanging die-cut sparkles, "LET’S TALK!!" bubble 2.2 m wide at the right leg, PA wraps, night neon on the header | `dressing` |
 | Box truss: span (outer) / front goalpost position | 12.6 / 0.3 in front of the deck edge; back goalpost 0.5 behind the frame | `stage.truss` |
 | IMAG screens: centre from the stage centre line / z / tower height | 8.3 / 1.0 behind the deck front / 4.6 | `stage.imag` |
 | PA stacks (ground-stacked) | 2 × (0.7 × 0.7 × 1.0) each side, at x ±6.2 | `stage.pa` |
@@ -49,7 +51,10 @@ mini-stage zone ≈ 250 m²; networking ≈ 252 m²; pause pocket 48 m²; foyer 
 | Item | Assumed | Config |
 |---|---|---|
 | Frame: setback from the deck's back edge / thickness / offset | 0.5 / 0.12 / 0.2 (5.5 × 3.5 as given) | `stage.frame` |
-| Speech-bubble sign width | 2.6 (top 5.2 as given) | `stage.sign` |
+| OPF logo (main stage style) | die-cut sign ≈ 3.6 m wide (max 1.1 high), bottom edge 0.4 below the truss top, on the header front | `stage.logo` |
+| Truss header box (main stage style) | 0.8 high × 0.45 deep printed cladding on all four top beams; yellow print, white stripe ends | `stage.headerBox` |
+| "MINI STAGE" speech bubble | die-cut, 2.2 m wide, beside the left truss leg (was above the frame; that spot now holds the header box + logo) | `dressing.bubble` |
+| Dressing (main stage style) | 6 hanging die-cut sparkles, PA wraps, night neon on the header | `dressing` |
 | Goalpost truss: span / front position | 8 / 0.3 in front of the deck edge; back goalpost behind the frame | `stage.truss` |
 | PA stacks (smaller than the panel stage) | 2 × (0.5 × 0.5 × 0.7) each side, at x ±4.6 | `stage.pa` |
 | Side panels: position | on the floor either side of the deck, centres x ±3.75 | `stage.sidePanels` |

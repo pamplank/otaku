@@ -4,7 +4,9 @@
 // overview. The stage is built in local coordinates inside a group placed at
 // `origin`; networking and the pause pocket use room coordinates (their zones).
 import * as THREE from 'three';
-import { stage as S, seating as SEAT, standing as STAND, signing as SIGN, networking as NET, pause as PZ } from '../../config/mini.config.js';
+import { stage as S, seating as SEAT, standing as STAND, signing as SIGN, networking as NET, pause as PZ, dressing as DR } from '../../config/mini.config.js';
+import { headerBox, logoSign, hangingSparkles, speechBubble, paWraps, neonStrips } from './stageStyle.js';
+import { room as ROOM } from '../../config/ballroom.config.js';
 import { palette as P } from '../../stage.config.js';
 import { toon, flat, box, stickerPanel, starSticker, canvasTexture, drawSparkle, FONT_DISPLAY } from '../sticker.js';
 import { makeSlot, labelPlaceholder, dieCutBoard } from '../slots.js';
@@ -23,6 +25,7 @@ export const MINI_ARTWORK = {
   miniSideL:  { title: 'Side panel left',   accept: 'image/*',         kind: 'Image' },
   miniSideR:  { title: 'Side panel right',  accept: 'image/*',         kind: 'Image' },
   miniNotice: { title: 'Community noticeboard', accept: 'image/*',     kind: 'Image' },
+  miniLogo:   { title: 'OPF logo sign',     accept: 'image/*',         kind: 'Image' },
 };
 
 function paStack() {
@@ -37,33 +40,6 @@ function paStack() {
     y += h;
   }
   return g;
-}
-
-// Round speech-bubble sign (die-cut board), text in the display face
-function speechBubble(text, width) {
-  const c = document.createElement('canvas');
-  c.width = 1000;
-  c.height = 520;
-  const ctx = c.getContext('2d');
-  ctx.beginPath();
-  ctx.ellipse(500, 225, 440, 190, 0, 0, Math.PI * 2);
-  ctx.moveTo(430, 400);
-  ctx.lineTo(380, 510);
-  ctx.lineTo(540, 408);
-  ctx.fillStyle = P.white;
-  ctx.fill();
-  ctx.lineWidth = 20;
-  ctx.strokeStyle = P.dark;
-  ctx.stroke();
-  ctx.fillStyle = P.dark;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = `900 118px ${FONT_DISPLAY}`;
-  ctx.fontStretch = 'expanded';
-  ctx.fillText(text, 500, 228, 760);
-  drawSparkle(ctx, 905, 70, 58, P.yellow, P.dark, 9);
-  drawSparkle(ctx, 88, 330, 40, P.pink, P.dark, 7);
-  return dieCutBoard(c, width, { thickness: 0.05, border: 0.06, board: P.cyan, edge: '#00a3ae' });
 }
 
 function highTable() {
@@ -120,23 +96,43 @@ export function buildMiniZone({ origin = new THREE.Vector3(), rects, seed = 60 }
   g.add(halo);
   glows.push(halo);
 
-  // Round speech-bubble "MINI STAGE" sign above the frame, top at sign.top
-  const bubble = speechBubble(S.sign.text, S.sign.width);
-  const bh = bubble.scale.y;
-  bubble.position.set(0, S.sign.top - bh / 2, frameFront + 0.12);
-  g.add(bubble);
-
-  // Truss: goalpost at the deck front + one behind the frame, 3 lights
+  // Truss: goalpost at the deck front + one behind the frame
   const T = S.truss;
-  g.add(boxTruss({ top: T.top, size: T.size, span: T.span, zs: [T.frontZ, frameZ - 0.45] }));
+  const backZ = frameZ - 0.45;
+  g.add(boxTruss({ top: T.top, size: T.size, span: T.span, zs: [T.frontZ, backZ] }));
+
+  // Printed header box on the top beams + die-cut OPF logo on its front (main stage style)
+  const HB = S.headerBox;
+  const hbox = headerBox({ top: T.top, size: T.size, span: T.span, zs: [T.frontZ, backZ], height: HB.height, depth: HB.depth, theme: HB.theme });
+  g.add(hbox.group);
+  const LG = S.logo;
+  const logoZ = hbox.frontZ + LG.standoff + LG.thickness / 2;
+  const logo = logoSign('miniLogo', { width: LG.width, maxHeight: LG.maxHeight, headerTop: T.top, drop: LG.drop, z: logoZ,
+    thickness: LG.thickness, border: LG.border, board: LG.board, ceiling: ROOM.ceiling });
+  g.add(logo.group);
+  slotsReady.push(logo.ready);
+
+  // 3 lights under the front header
   const xs = [-2.4, 0, 2.4];
   const targets = [new THREE.Vector3(-1, D.height, -1.5), new THREE.Vector3(0, 0, 5), new THREE.Vector3(1, D.height, -1.5)];
-  const fx = rigFixtures(g, { xs, y: T.top - T.size, z: T.frontZ, targets, origin, colors: [P.cyan, P.yellow, P.pink] });
+  const fx = rigFixtures(g, { xs, y: hbox.bottom, z: T.frontZ, targets, origin, colors: [P.cyan, P.yellow, P.pink] });
+
+  // Hanging die-cut sparkles, "MINI STAGE" speech bubble, night neon
+  g.add(hangingSparkles(DR.sparkles, hbox.bottom));
+  const BB = DR.bubble;
+  const bubble = speechBubble(BB.text, BB.width, { board: BB.board, edge: BB.edge, tail: BB.tail });
+  bubble.position.set(BB.x, BB.y, BB.z);
+  bubble.rotation.y = 0.25;
+  g.add(bubble);
+  const neon = neonStrips({ xMax: hbox.xMax, top: T.top, bottom: hbox.bottom, frontZ: hbox.frontZ, deckWidth: D.width, deckHeight: D.height, colors: DR.neon });
+  g.add(neon.group);
+  glows.push(...neon.glows);
 
   // Small PA stacks and the two side panels (texture slots) either side of the deck
   const P2 = S.pa, SP = S.sidePanels;
   for (const [side, key, label] of [[-1, 'miniSideL', 'SIDE PANEL LEFT'], [1, 'miniSideR', 'SIDE PANEL RIGHT']]) {
     const pa = paStack();
+    pa.add(paWraps({ width: P2.width, depth: P2.depth, heights: P2.heights, colors: DR.paWraps.colors, labels: DR.paWraps.labels }));
     pa.position.set(side * P2.x, 0, P2.z);
     g.add(pa);
     const panel = stickerPanel({ w: SP.width, h: SP.height, t: 0.08, color: P.white, border: 0.06, offset: 0.12, offsetColor: P.cyan });
@@ -155,7 +151,7 @@ export function buildMiniZone({ origin = new THREE.Vector3(), rects, seed = 60 }
   for (const [x, y, z, size, c] of [
     [-F.width / 2 + 0.1, D.height + F.height, frameFront + 0.25, 0.8, P.yellow],
     [F.width / 2 - 0.05, D.height + 0.25, frameFront + 0.25, 0.55, P.pink],
-    [S.sign.width / 2 + 0.2, S.sign.top - 0.1, frameFront + 0.3, 0.35, P.white],
+    [LG.width / 2 + 0.3, T.top + 0.3, logoZ + 0.1, 0.35, P.white],
   ]) {
     const sp = starSticker(size, c);
     sp.position.set(x, y, z);
@@ -301,8 +297,10 @@ export function buildMiniZone({ origin = new THREE.Vector3(), rects, seed = 60 }
       lines: [`${D.width} × ${D.depth} m · ${m(D.height)} high`, 'Front steps (stage left)'] },
     { id: 'mframe', pos: w(-F.width / 2 + 0.2, D.height + F.height - 0.4, frameFront + 0.05), title: 'Cyan sticker-card frame',
       lines: [`${F.width} × ${F.height} m · bold outline · yellow offset`, `LED ${L.width} × ${L.height} m inside, bottom ${m(L.bottom)}`] },
-    { id: 'msign', pos: w(S.sign.width / 2 + 0.5, S.sign.top - 0.3, frameFront + 0.2), title: 'Speech-bubble sign',
-      lines: [`"${S.sign.text}" · top ${m(S.sign.top)}`, `≈ ${S.sign.width} m wide (est.)`] },
+    { id: 'msign', pos: w(BB.x, BB.y + 0.7, BB.z), title: 'Speech bubble',
+      lines: [`"${BB.text}" · die-cut, ≈ ${BB.width} m wide (est.)`, 'Beside the truss, as on the main stage'] },
+    { id: 'mlogo', pos: w(LG.width / 2 + 0.2, T.top + 0.4, logoZ), title: 'OPF logo sign',
+      lines: [`Die-cut board ≈ ${m(LG.width)} wide (est.)`, `On the ${m(HB.height)} truss header box`, 'Mini print: yellow stripes · supplied logo only'] },
     { id: 'mtruss', pos: w(-T.span / 2 + 0.2, T.top, T.frontZ), title: 'Box truss',
       lines: [`Top ${m(T.top)} · ground-supported`, `≈ ${m(T.span)} wide (est.) · ${T.lights} lights`] },
     { id: 'mside', pos: w(-SP.x, SP.height + 0.3, SP.z), title: 'Side panels',
