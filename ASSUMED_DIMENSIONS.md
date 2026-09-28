@@ -148,3 +148,22 @@ Layout follows the RFP venue plan (OPF27 RFP pp. 34 / 36, "layout is provisional
 | Night | two soft washes over the IP zone, 14 m up | `src/booths/zone.js` |
 
 Every booth in the zone is the same model as `/booths/a`, `/booths/b` and `/booths/c`, and shows the artwork published there, so each queue stays inside its footprint. Staff tags and Plan C's photo clearance are toggles, off by default at this scale.
+
+## Main stage hall: concave layout around the Fountain (`src/layout.js` → `V`)
+
+The hall section now wraps around the Fountain like the IP BOOTH ZONE ring, so every curved edge is concave (it arches up in the middle on the top-down plan). The IP zone view is unchanged; its elliptical ring (`config/zone.config.js → pavilion`) is only read as a reference.
+
+| Item | Value | Where |
+|---|---|---|
+| Arc centre and radius | circle matching the zone ellipse's curvature at the stage (top of the ellipse): radius semiX² / semiZ = 115.5² / 63 ≈ 211.75 m on the ring's centreline; centre ≈ (0.9, 224.75), on the Fountain side | `V.C`, `V.Rc` |
+| Hall inner edge (Fountain side) | arc r ≈ 201.75 m, still 23 m from the deck front on the centreline | `V.Ri` |
+| Hall outer edge (behind the stage) | arc r ≈ 232.95 m, still at z −8.2 on the centreline | `V.Rb` |
+| Side edges | radial, ±9.1° (front ≈ 64 m wide, back ≈ 74 m) | `V.alpha` |
+| Booth areas | radial bands 14 m wide beyond each side, full depth | `V.beta` |
+| 250 kg/m² strips | radial bands 6 m wide inside each side edge, from the back arc to the aisle | `V.strip` |
+| Visitor aisle | 4.5 m band along the inner arc; arrows follow the arc | `V.Ra` |
+| Viewing pocket | straight back edge behind the pit (z 3.2), radial sides, front on a concentric arc solved for 250 m² (was ≈ 409 m² as drawn) | `V.pocketPoly` |
+| FOH / AC towers | FOH front-right inside the pocket, turned radially; AC towers on the pocket's front corners | `V.foh`, `V.acTowers` |
+| Backstage holding 6 × 4 m | turned radially, back edge on the outer arc | `src/build/hall.js` |
+| Glass walls + roof | front glass on the inner arc, back wall on the outer arc, radial end walls; the roof vaults between them | `src/build/hall.js` |
+| Stage, pit, barricade, ceiling zone | unchanged (pit and barricade stay straight and parallel to the stage front). The stage axis is 0.9 m off the arc centre (as the hall was before), which is ≈ 0.2° over 225 m | — |

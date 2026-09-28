@@ -2,13 +2,13 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { stage as S, site as X } from '../stage.config.js';
-import { L } from './layout.js';
+import { L, V } from './layout.js';
 
 const m = (v) => `${+v.toFixed(2)} m`;
 
 export function hotspotDefs() {
   const D = S.deck, LED = S.led, T = S.truss, W = S.wings, LG = S.logo, C = S.ceiling, A = S.arch;
-  const F = X.foh, PK = X.pocket, BS = X.backstage;
+  const F = V.foh, PK = X.pocket, BS = X.backstage;
   return [
     { id: 'deck', pos: [D.width / 2 - 0.5, D.height + 0.1, -0.4], title: 'Stage deck',
       lines: [`${D.width} × ${D.depth} m`, `Deck height ${m(D.height)}`] },
@@ -33,16 +33,16 @@ export function hotspotDefs() {
       lines: [`Ceiling ${m(C.height)} (25 ft)`, `≈ ${m(L.ceilingClear)} clear above the truss`] },
     { id: 'pit', pos: [-5, 0.3, X.pit.depth / 2], title: 'Pit + barricade',
       lines: [`Pit ${m(X.pit.depth)} deep`, `Barricade ≈ ${X.pit.width} m wide (est.)`] },
-    { id: 'pocket', pos: [L.cx + 4, 0.3, (PK.backZ + PK.frontCornerZ) / 2 + 3], title: 'Viewing pocket',
-      lines: [`≈ ${Math.round(L.pocketArea)} m² standing, as drawn to scale`, `Plan label says ~${PK.statedArea} m² (to confirm)`,
-        'Curved front edge'] },
+    { id: 'pocket', pos: [L.cx + 4, 0.3, (PK.backZ + V.C.z - V.pocketFrontR) / 2 + 1], title: 'Viewing pocket',
+      lines: [`≈ ${Math.round(V.pocketArea)} m² standing, as drawn to scale`, `Sized to the ~${PK.statedArea} m² on the plan`,
+        'Front edge follows the concave arc · sides radial'] },
     { id: 'foh', pos: [F.x, F.riser + 1.2, F.z], title: 'FOH',
       lines: [`≈ ${F.width} × ${F.depth} m (est.)`, `≈ ${m(F.z)} from the deck front`, 'Front right of the pocket'] },
-    { id: 'backstage', pos: [BS.centreX, 2.6, X.hall.backZ + BS.depth], title: 'Backstage holding',
+    { id: 'backstage', pos: [BS.centreX, 2.6, V.C.z - V.Rb + BS.depth], title: 'Backstage holding',
       lines: [`${BS.width} × ${BS.depth} m, rear left`, 'Crossover behind the LED'] },
-    { id: 'aisle', pos: [L.cx - 18, 0.3, L.hallFrontZ(L.cx - 18) - X.aisle.width / 2], title: 'Visitor aisle',
-      lines: ['Keep clear at all times', `≈ ${X.aisle.width} m wide (est.)`] },
-    { id: 'ac', pos: [X.acTowers[0].x, X.acTower.height + 0.2, X.acTowers[0].z], title: 'AC towers',
+    { id: 'aisle', pos: [L.cx - 18, 0.3, V.frontZ(L.cx - 18) - X.aisle.width / 2], title: 'Visitor aisle',
+      lines: ['Keep clear at all times', `≈ ${X.aisle.width} m wide (est.) · follows the concave arc`] },
+    { id: 'ac', pos: [V.acTowers[0].x, X.acTower.height + 0.2, V.acTowers[0].z], title: 'AC towers',
       lines: ['At the pocket’s front corners', 'Positions indicative'] },
   ];
 }

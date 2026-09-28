@@ -1,7 +1,7 @@
 // Crystal Pavilion hall section: zones from the plan view + a simple glass/arched-roof shell.
 import * as THREE from 'three';
 import { stage as S, site as X, palette as P } from '../../stage.config.js';
-import { L } from '../layout.js';
+import { L, V } from '../layout.js';
 import {
   toon, box, floorZone, floorLine, floorDecal, floorArrow, polyline, lineMat,
   canvasTexture, OUTLINE, OUTLINE_THIN, FONT,
@@ -27,93 +27,80 @@ export function buildHall() {
   ground.receiveShadow = true;
   g.add(ground);
 
-  // Section floor
-  const xl = L.cutX(-1, H.backZ), xr = L.cutX(1, H.backZ);
-  const front = L.arc(cx + H.frontHalfWidth, cx - H.frontHalfWidth, L.hallFrontZ, 48);
-  const sectionPoly = [[xl, H.backZ], [xr, H.backZ], ...front];
-  g.add(floorZone(sectionPoly, FLOOR.hall, Y.hall));
-  g.add(floorLine(sectionPoly, Y.line, OUTLINE_THIN));
+  // Section floor: inner edge (Fountain side) and outer edge (behind the stage)
+  // are concentric arcs around the Fountain; the side edges are radial.
+  g.add(floorZone(V.sectionPoly, FLOOR.hall, Y.hall));
+  g.add(floorLine(V.sectionPoly, Y.line, OUTLINE_THIN));
+  const facing = (t) => -t;                                                   // rotation.y that turns +z towards the Fountain
 
-  // Booth areas beyond each side of the section
-  const bw = H.boothAreaWidth;
+  // Booth areas beyond each side of the section, on the same ring
   const booths = [];
   for (const side of [-1, 1]) {
-    const xo = cx + side * (H.frontHalfWidth + bw);
-    const corner = cx + side * H.frontHalfWidth;
-    const poly = [
-      [L.cutX(side, H.backZ), H.backZ],
-      [L.cutX(side, H.backZ) + side * bw, H.backZ],
-      ...L.arc(xo, corner, L.hallFrontZ, 12),
-    ];
+    const [t0, t1] = side < 0 ? [-V.beta, -V.alpha] : [V.alpha, V.beta];
+    const poly = V.band(V.Ri, V.Rb, t0, t1, 12);
     g.add(floorZone(poly, FLOOR.booths, Y.hall));
     booths.push(poly);
-    // Simple booth blocks
+    // Simple booth blocks, facing the Fountain
     const colors = [P.pink, P.cyan, P.yellow];
+    const tm = t0 + (t1 - t0) * (side < 0 ? 0.45 : 0.55);
     for (let r = 0; r < 4; r++) {
-      const z = H.backZ + 4 + r * 5.5;
-      const x = L.cutX(side, z) + side * (bw * 0.55);
+      const [x, z] = V.polar(tm, V.Rb - 4 - r * 5.5);
       const b = box(3, 2.5, 3, toon('#f4f1ec'));
       b.position.set(x, 1.25, z);
+      b.rotation.y = facing(tm);
       const fascia = box(3.02, 0.4, 3.02, toon(colors[(r + (side > 0 ? 1 : 0)) % 3]), { edges: false });
       fascia.position.y = 1.05;
       b.add(fascia);
       g.add(b);
     }
+    const tl = t0 + (t1 - t0) * (side < 0 ? 0.8 : 0.2);
+    const [lx, lz] = V.polar(tl, V.Ri + 10);
     const lab = floorDecal([{ text: side < 0 ? 'LEFT AREA · BOOTHS' : 'RIGHT AREA · BOOTHS', size: 0.5 }], 12, 1.4,
-      { rotate: side * Math.PI / 2 });
-    lab.position.set(L.cutX(side, 14) + side * bw * 0.2, Y.decal, 13);
+      { rotate: side * Math.PI / 2 - tl });
+    lab.position.set(lx, Y.decal, lz);
     g.add(lab);
   }
 
-  // 250 kg/m² flooring strips down each side
+  // 250 kg/m² flooring strips down each side, bounded by radial lines
   const sw = X.flooringStrips.width;
-  const zEnd = H.frontCornerZ - X.aisle.width;
   for (const side of [-1, 1]) {
-    const poly = [
-      [L.cutX(side, H.backZ), H.backZ],
-      [L.cutX(side, H.backZ) - side * sw, H.backZ],
-      [L.cutX(side, zEnd) - side * sw, L.aisleInnerZ(L.cutX(side, zEnd) - side * sw)],
-      [L.cutX(side, zEnd), L.aisleInnerZ(L.cutX(side, zEnd))],
-    ];
+    const [t0, t1] = side < 0 ? [-V.alpha, -V.alpha + V.strip] : [V.alpha - V.strip, V.alpha];
+    const poly = V.band(V.Ra, V.Rb, t0, t1, 4);
     g.add(floorZone(poly, FLOOR.strips, Y.zone));
     g.add(floorLine(poly, Y.line, OUTLINE_THIN));
-    const zMid = (H.backZ + zEnd) / 2;
+    const tm = (t0 + t1) / 2, rm = (V.Ra + V.Rb) / 2;
+    const [dx, dz] = V.polar(tm, rm);
     const d = floorDecal([{ text: '250 KG/M² FLOORING', size: 0.55, color: '#c0314f' }], 16, 1.3,
-      { rotate: side * Math.PI / 2 });
-    d.position.set(L.cutX(side, zMid) - side * sw / 2, Y.decal, zMid);
+      { rotate: side * Math.PI / 2 - tm });
+    d.position.set(dx, Y.decal, dz);
     g.add(d);
   }
 
-  // Visitor aisle (curved, kept clear) with direction arrows
+  // Visitor aisle along the inner concave arc, kept clear; arrows follow the arc
   const aw = X.aisle.width;
-  const aL = L.cutX(-1, zEnd), aR = L.cutX(1, zEnd);
-  const aislePoly = [
-    ...L.arc(aL, aR, L.aisleInnerZ, 48),
-    ...L.arc(cx + H.frontHalfWidth, cx - H.frontHalfWidth, L.hallFrontZ, 48),
-  ];
+  const aislePoly = V.band(V.Ri, V.Ra, -V.alpha, V.alpha, 64);
   g.add(floorZone(aislePoly, FLOOR.aisle, Y.zone));
   g.add(floorLine(aislePoly, Y.line, OUTLINE_THIN));
+  const [ax, az] = V.polar(0, V.Ri + aw / 2);
   const aisleDecal = floorDecal([{ text: 'VISITOR AISLE · KEEP CLEAR', size: 0.6 }], 16, 1.6);
-  aisleDecal.position.set(cx, Y.decal, L.hallFrontZ(cx) - aw / 2);
+  aisleDecal.position.set(ax, Y.decal, az);
   g.add(aisleDecal);
-  const lane = (x, frac) => L.hallFrontZ(x) - aw * frac;
-  const arrowsAt = [[-24, 0.7, -1], [-13, 0.7, -1], [13, 0.3, 1], [24, 0.3, 1]];
-  for (const [ox, frac, dir] of arrowsAt) {
-    const x = cx + ox;
-    const z = lane(x, frac);
-    const dz = lane(x + dir * 0.5, frac) - z;
-    g.add(floorArrow(x, z, dir * 0.5, dz, 5.5, 0.9, P.dark, Y.arrow));
+  // [fraction of the half-angle, lane (0 = Fountain edge … 1 = stage edge), direction]
+  for (const [k, lane, dir] of [[-0.75, 0.3, -1], [-0.4, 0.3, -1], [0.4, 0.7, 1], [0.75, 0.7, 1]]) {
+    const t = k * V.alpha;
+    const [x, z] = V.polar(t, V.Ri + aw * lane);
+    g.add(floorArrow(x, z, dir * Math.cos(t), dir * Math.sin(t), 5.5, 0.9, P.dark, Y.arrow));
   }
 
   // Viewing pocket
-  g.add(floorZone(L.pocketPoly, FLOOR.pocket, Y.zone));
-  g.add(floorLine(L.pocketPoly, Y.line, OUTLINE));
-  const pz = (X.pocket.backZ + X.pocket.frontCornerZ) / 2 + 1;
+  // Viewing pocket: straight back behind the pit, radial sides, front on the concave arc
+  g.add(floorZone(V.pocketPoly, FLOOR.pocket, Y.zone));
+  g.add(floorLine(V.pocketPoly, Y.line, OUTLINE));
   const pDecal = floorDecal([
     { text: 'VIEWING POCKET', size: 0.42 },
-    { text: `≈ ${Math.round(L.pocketArea)} M² AS DRAWN · STANDING`, size: 0.2, font: FONT },
-  ], 18, 2.8);
-  pDecal.position.set(cx - 3, Y.decal, pz);
+    { text: `≈ ${Math.round(V.pocketArea)} M² AS DRAWN · STANDING`, size: 0.2, font: FONT },
+  ], 14, 2.2);
+  pDecal.position.set(cx - 3, Y.decal + 0.004, V.C.z - V.pocketFrontR - 1.25);
   g.add(pDecal);
 
   // Pit + barricade
@@ -134,44 +121,52 @@ export function buildHall() {
 
   // Backstage holding (rear left) with pipe & drape
   const BS = X.backstage;
-  const bx0 = BS.centreX - BS.width / 2, bx1 = BS.centreX + BS.width / 2;
-  const bz0 = H.backZ, bz1 = H.backZ + BS.depth;
-  const bsPoly = [[bx0, bz0], [bx1, bz0], [bx1, bz1], [bx0, bz1]];
+  // Radial: back edge on the outer arc, centreline pointing at the Fountain side
+  const bt = Math.asin((BS.centreX - V.C.x) / (V.Rb - BS.depth / 2));
+  const bsG = new THREE.Group();
+  const [bcx, bcz] = V.polar(bt, V.Rb - BS.depth / 2);
+  bsG.position.set(bcx, 0, bcz);
+  bsG.rotation.y = facing(bt);
+  const loc = [[-BS.width / 2, -BS.depth / 2], [BS.width / 2, -BS.depth / 2], [BS.width / 2, BS.depth / 2], [-BS.width / 2, BS.depth / 2]];
+  const bsPoly = loc.map(([x, z]) => [bcx + x * Math.cos(bt) - z * Math.sin(bt), bcz + x * Math.sin(bt) + z * Math.cos(bt)]);
   g.add(floorZone(bsPoly, FLOOR.backstage, Y.zone));
   g.add(floorLine(bsPoly, Y.line, OUTLINE));
   const drapeMat = toon('#6d6872');
   const drapeH = 2.4;
   const dFront = box(BS.width, drapeH, 0.05, drapeMat, { line: OUTLINE_THIN });
-  dFront.position.set(BS.centreX, drapeH / 2, bz1);
-  g.add(dFront);
+  dFront.position.set(0, drapeH / 2, BS.depth / 2);
   const dLeft = box(0.05, drapeH, BS.depth, drapeMat, { line: OUTLINE_THIN });
-  dLeft.position.set(bx0, drapeH / 2, (bz0 + bz1) / 2);
-  g.add(dLeft);
+  dLeft.position.set(-BS.width / 2, drapeH / 2, 0);
   const bsDecal = floorDecal([
     { text: 'BACKSTAGE', size: 0.3 }, { text: 'HOLDING 6 × 4 M', size: 0.22 },
   ], 5.4, 2.2);
-  bsDecal.position.set(BS.centreX, Y.decal, (bz0 + bz1) / 2);
-  g.add(bsDecal);
+  bsDecal.position.set(0, Y.decal, 0);
+  bsG.add(dFront, dLeft, bsDecal);
+  g.add(bsG);
+  const bx1 = bsPoly[1][0] + (bsPoly[2][0] - bsPoly[1][0]) / 2;   // right edge, mid depth
   // Route arrow: backstage → crossover
   const crossZ = -S.deck.depth - S.crossover.depth / 2;
   g.add(floorArrow((bx1 + (-S.crossover.width / 2)) / 2 - 0.2, crossZ, 1, 0,
     Math.max(1.5, -S.crossover.width / 2 - bx1 - 0.6), 0.7, P.dark, Y.arrow));
 
   // FOH position
-  const FOH = X.foh;
+  // FOH position: front-right inside the pocket, square to the radial line
+  const FOH = V.foh;
+  const fohG = new THREE.Group();
+  fohG.position.set(FOH.x, 0, FOH.z);
+  fohG.rotation.y = FOH.rot;
   const riser = box(FOH.width, FOH.riser, FOH.depth, toon('#2f2d31'));
-  riser.position.set(FOH.x, FOH.riser / 2, FOH.z);
-  g.add(riser);
+  riser.position.set(0, FOH.riser / 2, 0);
   const desk = box(FOH.width * 0.6, 0.85, 0.8, toon('#4a474b'));
-  desk.position.set(FOH.x, FOH.riser + 0.425, FOH.z - FOH.depth / 2 + 0.6);
-  g.add(desk);
+  desk.position.set(0, FOH.riser + 0.425, -FOH.depth / 2 + 0.6);
   const fohDecal = floorDecal([{ text: 'FOH', size: 0.7, color: P.white }], 2, 0.8);
-  fohDecal.position.set(FOH.x, FOH.riser + 0.012, FOH.z + FOH.depth / 2 - 0.6);
-  g.add(fohDecal);
+  fohDecal.position.set(0, FOH.riser + 0.012, FOH.depth / 2 - 0.6);
+  fohG.add(riser, desk, fohDecal);
+  g.add(fohG);
 
-  // AC towers (positions indicative)
+  // AC towers on the pocket's two front corners (positions indicative)
   const AC = X.acTower;
-  for (const t of X.acTowers) {
+  for (const t of V.acTowers) {
     const tw = box(AC.width, AC.height, AC.depth, toon('#f2f0ec'));
     tw.position.set(t.x, AC.height / 2, t.z);
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(AC.width * 0.35, AC.width * 0.35, 0.05, 24), toon('#e53935'));
@@ -181,7 +176,7 @@ export function buildHall() {
   }
 
   // The Fountain (outside the venue), for orientation
-  const fz = L.hallFrontZ(cx) + 16;
+  const fz = V.frontZ(cx) + 16;
   const pool = new THREE.Mesh(new THREE.CircleGeometry(1, 64), toon('#9fd9e4'));
   pool.rotation.x = -Math.PI / 2;
   pool.scale.set(14, 6, 1);
@@ -195,11 +190,11 @@ export function buildHall() {
   }
   g.add(polyline(ring, OUTLINE_THIN));
   const fDecal = floorDecal([{ text: 'THE FOUNTAIN (OUTSIDE THE VENUE) ↓', size: 0.5 }], 18, 1.4);
-  fDecal.position.set(cx, Y.decal, L.hallFrontZ(cx) + 2.2);
+  fDecal.position.set(cx, Y.decal, V.frontZ(cx) + 2.2);
   g.add(fDecal);
 
   // Scale bar 0–10 m (matches the plan's bar), outside the front-right of the hall
-  const sbX = cx + H.frontHalfWidth - 14, sbZ = L.hallFrontZ(cx + H.frontHalfWidth - 9) + 4.5;
+  const sbX = cx + H.frontHalfWidth - 14, sbZ = V.frontZ(cx + H.frontHalfWidth - 9) + 4.5;
   const segA = box(5, 0.04, 0.5, toon(P.dark), { line: OUTLINE_THIN });
   segA.position.set(sbX + 2.5, 0.02, sbZ);
   const segB = box(5, 0.04, 0.5, toon(P.white), { line: OUTLINE_THIN });
@@ -223,10 +218,7 @@ export function buildHall() {
 function buildShell() {
   const group = new THREE.Group();
   const H = X.hall;
-  const cx = L.cx;
   const eave = H.eaveHeight;
-  const xMin = cx - H.frontHalfWidth - H.boothAreaWidth;
-  const xMax = cx + H.frontHalfWidth + H.boothAreaWidth;
 
   const glass = new THREE.MeshBasicMaterial({
     color: '#bfe8ef', transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false,
@@ -253,26 +245,25 @@ function buildShell() {
     const m = new THREE.Mesh(geo, mat);
     m.renderOrder = 5;
     group.add(m);
-    // mullions + top/bottom rails
+    // mullions + top rail
     pts.forEach(([x, z], i) => {
       if (i % 3 === 0) group.add(polyline([new THREE.Vector3(x, 0, z), new THREE.Vector3(x, eave, z)], mullionMat));
     });
     group.add(polyline(pts.map(([x, z]) => new THREE.Vector3(x, eave, z)), mullionMat));
   };
 
-  const frontPts = L.arc(xMin, xMax, L.hallFrontZ, 60);
-  wall(frontPts, glass);
-  wall(Array.from({ length: 31 }, (_, k) => [xMin + ((xMax - xMin) * k) / 30, H.backZ]), glassBack);
-  // End walls
-  wall([[xMin, H.backZ], [xMin, L.hallFrontZ(xMin)]], glass);
-  wall([[xMax, H.backZ], [xMax, L.hallFrontZ(xMax)]], glass);
+  // Concentric walls: glass front on the inner arc, back wall on the outer arc,
+  // radial end walls
+  const t0 = -V.beta, t1 = V.beta;
+  wall(V.arcR(V.Ri, t0, t1, 60), glass);
+  wall(V.arcR(V.Rb, t0, t1, 30), glassBack);
+  for (const t of [t0, t1]) wall([V.polar(t, V.Rb), V.polar(t, V.Ri)], glass);
 
-  // Arched roof: vault from the back wall to the curved front wall
+  // Arched roof: vault from the back wall to the front wall, around the same centre
   const roof = new THREE.Group();
   const nu = 40, nv = 18;
   const rp = (u, v) => {
-    const x = xMin + (xMax - xMin) * u;
-    const z = H.backZ + (L.hallFrontZ(x) - H.backZ) * v;
+    const [x, z] = V.polar(t0 + (t1 - t0) * u, V.Rb + (V.Ri - V.Rb) * v);
     return new THREE.Vector3(x, eave + H.roofRise * Math.sin(Math.PI * v), z);
   };
   const pos = [];
@@ -307,6 +298,7 @@ function buildShell() {
 
   return { group, roof, glassMats: [glass, glassBack, roofMat], lineMats: [mullionMat, ribMat] };
 }
+
 
 // ─── Low-ceiling zone: 7.6 m (25 ft) plane + clearance marker ───────────────
 function buildCeiling() {

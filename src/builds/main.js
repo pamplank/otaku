@@ -4,6 +4,7 @@ import { buildStage } from '../build/stage.js';
 import { buildHall } from '../build/hall.js';
 import { buildDressing } from '../build/dressing.js';
 import { buildPeople } from '../build/people.js';
+import { V } from '../layout.js';
 import { buildLabels } from '../labels.js';
 import { presets } from '../cameras.js';
 import { MAIN_ARTWORK } from '../artwork.js';
@@ -27,7 +28,7 @@ export default {
   create() {
     const stage = buildStage();
     const hall = buildHall();
-    const people = buildPeople();
+    const people = buildPeople({ pocket: V.pocketPoly, pocketArea: V.pocketArea, foh: V.foh, acTowers: V.acTowers });
     const labels = buildLabels();
     const dressing = buildDressing();
     return {
