@@ -116,7 +116,7 @@ function supabaseStore() {
     kind: 'supabase',
     async readState(build = 'main') {
       for (const file of readPaths(build)) {
-        const { data, error } = await bucket().download(file);
+        const { data, error } = await bucket().download(file, { cacheNonce: Date.now() });   // never a cached copy
         if (!error) return JSON.parse(await data.text());
         if (!/not.?found|does not exist|404|400/i.test(`${error.message} ${error.statusCode ?? ''}`)) throw error;
       }
