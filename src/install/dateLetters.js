@@ -153,7 +153,7 @@ export function dateLettersScene({ art }) {
     { x: X[1] + 0.05, y: PL.height, z: 0.36, rot: 0.1, pose: 'pose' },
     { x: X[3] - 0.1, y: PL.height, z: 0.36, rot: -0.15, pose: 'wave' },
     { x: X[0] + 0.35, z: 1.0, rot: 0.2, pose: 'pose' },
-    { x: -4.3, z: 3.9, rot: facing(-4.3, 3.9, -1.5, 0.5), pose: 'phone' }, { x: 4.6, z: 4.3, rot: facing(4.6, 4.3, 1.5, 0.5), pose: 'phone' },
+    { x: -4.3, z: 3.9, rot: facing(-4.3, 3.9, -1.5, 0.5), pose: 'phone' }, { x: 5.8, z: 3.2, rot: facing(5.8, 3.2, 1.5, 0.5), pose: 'phone' },
     { x: X[2] + 0.45, z: 1.05, rot: -0.25, pose: 'stand' },
     { x: 6.8, z: 2.6, rot: -1.6, pose: 'walk' }, { x: -7.2, z: 3.8, rot: 1.5, pose: 'walk' }, { x: 3.5, z: -3.6, rot: 2.6, pose: 'stand' },
   ], 21);
