@@ -26,7 +26,14 @@ export async function fetchState(id) {
   try { return await call(`/api/state${q(id)}`); } catch { return null; }
 }
 
-export const saveState = (patch) => call(`/api/state${q()}`, { method: 'PUT', body: patch });
+// One save at a time: the server merges each change into the latest state, so
+// overlapping saves (several uploads in a row) would otherwise overwrite each other.
+let saving = Promise.resolve();
+export const saveState = (patch) => {
+  const run = saving.then(() => call(`/api/state${q()}`, { method: 'PUT', body: patch }));
+  saving = run.catch(() => {});
+  return run;
+};
 
 // { admin, enabled, storage }; a site without the API reads as "no admin mode"
 export async function adminStatus() {
