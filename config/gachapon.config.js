@@ -10,7 +10,7 @@ export const machine = {
   dome: { radius: 0.95 },                                // EST clear dome
   cap: { radius: 0.32, height: 0.2 },                    // EST top knob → ≈ 3.7 m overall
   crank: { radius: 0.28, x: -0.45, y: 0.85 },            // EST
-  chute: { width: 0.44, height: 0.38, x: 0.45, y: 0.42 },// EST
+  chute: { width: 0.44, height: 0.38, x: 0.45, y: 0.58 },// EST
   color: 'pink', collarColor: 'white', capColor: 'yellow', crankColor: 'cyan',   // palette; editable
 };
 // Capsules in three tiers: common (palette colours), special (silver), rare (gold)

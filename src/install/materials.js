@@ -61,7 +61,7 @@ export function clearPlastic() {
 // Lightbox face: emissive (glows at night, lit-looking by day)
 export const lightbox = (map) => new THREE.MeshStandardMaterial({
   color: '#ffffff', map, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: 0.9, roughness: 0.3,
-  userData: { dayGlow: 0.9, nightGlow: 2.6 },
+  userData: { dayGlow: 0.9, nightGlow: 0.7 },
 });
 
 // ─── Floors ───

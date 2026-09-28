@@ -161,7 +161,7 @@ export function dateLettersScene({ art }) {
     install.add(s, s.target);
     nightLights.push(s);
   }
-  const glowLight = new THREE.PointLight('#fff4e0', 2.5, 6, 2);
+  const glowLight = new THREE.PointLight('#fff4e0', 1.2, 6, 2);
   glowLight.position.set(0, LB.bottom + LB.height / 2, F.z + 0.6);
   glowLight.visible = false;
   install.add(glowLight);

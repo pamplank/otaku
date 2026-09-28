@@ -15,7 +15,8 @@ import { FONT, FONT_BODY } from '../sticker.js';
 const KV = ['assets/opf-kv.jpg'];
 const m = (v) => `${+v.toFixed(2)} m`;
 
-// Capsule: clear-ish top half + tier-coloured bottom half
+// Capsule: frosted-white top half + tier-coloured bottom half (both opaque, so
+// they still show through the transmissive dome)
 const capGeo = { top: null, bottom: null };
 function capsule(r, bottomMat, topMat) {
   capGeo.top ??= new THREE.SphereGeometry(r, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2);
@@ -171,7 +172,7 @@ export function gachaponScene({ art }) {
 
   // Capsules in three tiers, packed in the lower part of the dome
   const rand = mulberry32(CP.seed);
-  const clearTop = acrylic('#ffffff', { transparent: true, opacity: 0.72, roughness: 0.12 });
+  const clearTop = new THREE.MeshPhysicalMaterial({ color: '#f4f7f8', roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08 });
   const tierMats = {
     common: ['pink', 'cyan', 'yellow', 'white'].map((c) => acrylic(c, { roughness: 0.18 })),
     special: [new THREE.MeshStandardMaterial({ color: '#cfd3d8', metalness: 1, roughness: 0.22 })],
@@ -268,7 +269,7 @@ export function gachaponScene({ art }) {
 
   // Dimensions + the giveaway annotation (Labels toggle)
   const dims = new THREE.Group();
-  dims.add(dimLine([-B.width / 2 - 0.25, 0, -B.depth / 2 - 0.3], [-B.width / 2 - 0.25, overall, -B.depth / 2 - 0.3], `≈ ${m(overall)}`, { tick: [1, 0, 0], textHeight: 0.24, textOffset: [0, 0.6, 0] }));
+  dims.add(dimLine([-B.width / 2 - 0.3, 0, zf + 0.2], [-B.width / 2 - 0.3, overall, zf + 0.2], `≈ ${m(overall)}`, { tick: [1, 0, 0], textHeight: 0.24, textOffset: [0, 0.6, 0] }));
   dims.add(dimLine([-B.width / 2, yb + B.height + 0.35, zf + 0.25], [B.width / 2, yb + B.height + 0.35, zf + 0.25], `BODY ${m(B.width)}`, { tick: [0, 1, 0], textHeight: 0.2 }));
   const give = textSprite(`GIVEAWAY · ${TX.giveaway}`, { height: 0.14, bg: PALETTE.yellow });
   give.position.set(PZ.x, PZ.bottom + PZ.height + 0.3, PZ.z);
