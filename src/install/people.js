@@ -97,12 +97,12 @@ export function person({ pose = 'stand', seed = 1, height = 1.7 } = {}) {
   return g;
 }
 
-// Several people: [{ x, z, rot, pose, height }]
+// Several people: [{ x, z, rot, pose, height, y? }] (y: standing on a plinth)
 export function crowd(list, seed = 3) {
   const g = new THREE.Group();
   list.forEach((p, i) => {
     const f = person({ pose: p.pose, seed: seed * 31 + i, height: p.height ?? 1.58 + ((i * 37) % 23) / 100 });
-    f.position.set(p.x, 0, p.z);
+    f.position.set(p.x, p.y ?? 0, p.z);
     f.rotation.y = p.rot ?? 0;
     g.add(f);
   });

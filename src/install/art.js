@@ -9,12 +9,12 @@
 // Design options (palette body colours, date / tag texts, fit modes) live in the
 // build's shared state (`options`), the same way the artwork does.
 import * as THREE from 'three';
-import { customSlot } from '../slots.js';
+import { customSlot, slotEvents } from '../slots.js';
 import { saveState } from '../shared.js';
 import { FONT, FONT_BODY, FONT_DISPLAY } from '../sticker.js';
 import { PALETTE, PALETTE_NAMES, col } from './materials.js';
 
-const FITS = { contain: 'Contain', cover: 'Cover', fill: 'Fill with colour' };
+const FITS = { contain: 'Contain', cover: 'Cover', fill: 'Contain on colour' };
 
 function fitFont(ctx, text, maxW, px, font, weight = '') {
   ctx.font = `${weight} ${px}px ${font}`;
@@ -92,37 +92,76 @@ export function createArt() {
   }
 
   // A slot drawn onto a canvas texture of aspect w:h.
-  //   draw(ctx, W, H) paints the placeholder; body() → the part's colour name.
-  function slot(key, { title, w, h, body = () => 'white', placeholder, assets = [], fit = 'contain', px = 1024, emissive = false }) {
-    const W = w >= h ? px : Math.round((px * w) / h), H = w >= h ? Math.round((px * h) / w) : px;
+  //   placeholder(ctx, W, H) paints the placeholder; body() → the part's colour name.
+  //   defaultMode: 'colour' for faces that start as flat colour (e.g. sticker returns).
+  //   pad: margin around an image as a fraction of each side, or [x, y] fractions (lightbox logos).
+  //   onAspect(a): called with the aspect of each image shown (not colour/placeholder).
+  function slot(key, { title, w, h, body = () => 'white', placeholder, assets = [], fit = 'contain', px = 1024, emissive = false,
+    defaultMode = null, pad = 0, onAspect = null, fixedFit = false }) {
     const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const tex = new THREE.CanvasTexture(canvas);
+    let W, H;
+    const size = (ww, hh) => {
+      W = ww >= hh ? px : Math.round((px * ww) / hh);
+      H = ww >= hh ? Math.round((px * hh) / ww) : px;
+      canvas.width = W; canvas.height = H;
+    };
+    size(w, h);
+    let tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
-    const rec = { key, title, w, h, body, placeholder, image: null, tex, canvas, fitDef: fit, emissive };
+    const rec = { key, title, w, h, body, placeholder, image: null, flat: null, tex, canvas, fitDef: fit, emissive, users: [], fixedFit, pad: Array.isArray(pad) ? pad : [pad, pad] };
     rec.redraw = () => {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, W, H);
-      if (!rec.image) {
+      if (rec.flat) {
+        ctx.fillStyle = rec.flat;                 // flat colour: nothing else on the face
+        ctx.fillRect(0, 0, W, H);
+      } else if (!rec.image) {
         placeholder(ctx, W, H);
       } else {
         const img = rec.image;
         const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
-        const mode = get(`fit.${key}`) ?? fit;
+        const mode = fixedFit ? fit : get(`fit.${key}`) ?? fit;
         ctx.fillStyle = col(mode === 'fill' ? (get(`fill.${key}`) ?? 'white') : body());
         ctx.fillRect(0, 0, W, H);
-        const k = mode === 'cover' ? Math.max(W / iw, H / ih) : Math.min(W / iw, H / ih);
+        const [px_, py_] = rec.pad;
+        const aw = W * (1 - 2 * px_), ah = H * (1 - 2 * py_);
+        const k = mode === 'cover' ? Math.max(aw / iw, ah / ih) : Math.min(aw / iw, ah / ih);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(W * px_, H * py_, aw, ah); ctx.clip();
         ctx.drawImage(img, (W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k);
+        ctx.restore();
       }
       tex.needsUpdate = true;
     };
+    // The face changed size (e.g. a lightbox fitted to a new logo): new canvas size + texture
+    rec.resize = (ww, hh) => {
+      rec.w = ww; rec.h = hh;
+      size(ww, hh);
+      const old = tex;
+      tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      rec.tex = tex;
+      for (const m of rec.users) { if (m.map === old) m.map = tex; if (m.emissiveMap === old) m.emissiveMap = tex; m.needsUpdate = true; }
+      old.dispose();
+      Object.assign(s.slot, { width: ww, height: hh, aspect: ww / hh });
+      rec.redraw();
+    };
+    // Materials showing this face (so a resize can swap their texture)
+    rec.use = (mat) => { rec.users.push(mat); return mat; };
     const s = customSlot(key, {
-      info: { width: w, height: h, aspect: w / h, spec: `${+w.toFixed(2)} × ${+h.toFixed(2)} m · image · contain / cover / fill` },
-      assets,
+      info: { width: w, height: h, aspect: w / h, spec: `${+w.toFixed(2)} × ${+h.toFixed(2)} m · placeholder / colour / image` },
+      assets, defaultMode, defaultColour: () => body(),
       placeholderThumb: () => { const c = document.createElement('canvas'); c.width = W; c.height = H; placeholder(c.getContext('2d'), W, H); return c.toDataURL(); },
-      apply(res) { rec.image = res ? res.tex.image : null; rec.redraw(); },
+      apply(res) {
+        rec.flat = res?.flat ?? null;
+        rec.image = res && !res.flat ? res.tex.image : null;
+        if (rec.image && onAspect) onAspect(res.aspect);
+        rec.redraw();
+      },
     });
+    rec.slot = s.slot;
     rec.ready = s.ready;
     slotDefs[key] = rec;
     return rec;
@@ -172,10 +211,12 @@ export function createArt() {
     });
 
     // Fit controls on each slot row
+    const fitUis = [];
     for (const [key, rec] of Object.entries(slotDefs)) {
       const row = panel.rows[key]?.el;
-      if (!row) continue;
+      if (!row || rec.fixedFit) continue;
       const ui = document.createElement('div');
+      fitUis.push([rec, ui]);
       ui.className = 'opt-fit';
       const mode = get(`fit.${key}`) ?? rec.fitDef;
       ui.innerHTML = `<label class="opt-label">Fit <select>${Object.entries(FITS).map(([v, t]) => `<option value="${v}"${v === mode ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
@@ -189,6 +230,10 @@ export function createArt() {
         save(`fill.${key}`, b.dataset.c, n);
       }));
     }
+    // Fit only matters for an image
+    const syncFit = () => { for (const [rec, ui] of fitUis) ui.hidden = rec.slot.mode !== 'image'; };
+    slotEvents.addEventListener('change', syncFit);
+    syncFit();
   }
 
   return {

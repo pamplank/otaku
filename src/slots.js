@@ -182,8 +182,16 @@ const placeholders = {
 
 // ─── Slot controller ────────────────────────────────────────────────────────
 // Artwork priority: published (shared) file > /public/assets file > placeholder.
-// `apply(res)` puts loaded artwork (or null = placeholder) on the model.
+// Fill mode per face (admin "Edit artwork", saved in the build's shared options):
+//   placeholder  the labelled placeholder (stripes + label)
+//   colour       one flat palette colour, nothing else (option `fill.<key>`)
+//   image        the file (a flat colour until one is uploaded)
+// Unset = the image when there is one, else the placeholder.
+// `apply(res)` puts loaded artwork (or null = placeholder) on the model; a flat
+// colour arrives as { tex, aspect, flat: '#hex', canvas }.
 export const slots = {}; // key -> slot controller
+export const FILL_MODES = { placeholder: 'Placeholder', colour: 'Colour', image: 'Image' };
+export const fillHex = (name) => P[name] ?? name;
 
 function disposeRes(res) {
   res.tex.dispose();
@@ -191,34 +199,70 @@ function disposeRes(res) {
   if (res.url) URL.revokeObjectURL(res.url);
 }
 
-function slotController(key, { apply, info, placeholderThumb, assets }) {
-  let current = null; // loaded artwork ({ tex, video?, url? }) or null for the placeholder
+// Flat colour "artwork" at the slot's aspect (cached per colour + aspect)
+const flatCache = new Map();
+function flatRes(hex, aspect) {
+  const a = Math.min(64, Math.max(1 / 64, aspect || 1));
+  const id = `${hex}|${a.toFixed(3)}`;
+  if (!flatCache.has(id)) {
+    const c = document.createElement('canvas');
+    c.width = a >= 1 ? 256 : Math.max(4, Math.round(256 * a));
+    c.height = a >= 1 ? Math.max(4, Math.round(256 / a)) : 256;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = hex;
+    ctx.fillRect(0, 0, c.width, c.height);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    flatCache.set(id, { tex, aspect: a, flat: hex, canvas: c, file: null });
+  }
+  return flatCache.get(id);
+}
+
+function slotController(key, { apply, info, placeholderThumb, assets, defaultMode = null, defaultColour = () => 'white' }) {
+  let image = null; // loaded artwork ({ tex, video?, url? }) or null
   let assetRes = null; // the /public/assets file, shown when nothing is published
   let seq = 0; // ignores loads that finish after a newer one started
   let sharedUrl = null; // URL of the published file currently applied
+  let opts = { mode: null, colour: null, legacyFill: false };
+  let shown;
 
-  function show(res, source) {
-    if (current && current !== assetRes) disposeRes(current);
-    current = res;
-    apply(res);
-    if (res?.video) res.video.play().catch(() => {});
-    if (assetRes && res !== assetRes) assetRes.video?.pause();
-    slotStatus[key] = res ? res.file : 'placeholder';
-    slot.source = res ? source : 'placeholder';
-    slot.file = res ? res.file : null;
+  const colourName = () => opts.colour ?? defaultColour();
+  const mode = () => opts.mode ?? (opts.legacyFill && !image ? 'colour' : null) ?? defaultMode ?? (image ? 'image' : 'placeholder');
+
+  function display() {
+    const m = mode();
+    const res = m === 'placeholder' ? null : m === 'colour' || !image ? flatRes(fillHex(colourName()), slot.aspect) : image;
+    if (res !== shown) {
+      shown = res;
+      apply(res);
+    }
+    if (image?.video) { if (res === image) image.video.play().catch(() => {}); else image.video.pause(); }
+    slotStatus[key] = res ? (res.flat ? 'colour' : res.file) : 'placeholder';
+    slot.mode = m;
     slot.onChange?.(slot);
     slotEvents.dispatchEvent(new Event('change'));
   }
 
+  function setImage(res, source) {
+    if (image && image !== assetRes && image !== res) disposeRes(image);
+    if (assetRes && res !== assetRes) assetRes.video?.pause();
+    image = res;
+    slot.source = res ? source : 'placeholder';
+    slot.file = res ? res.file : null;
+    display();
+  }
+
   const slot = {
     key, ...info, meshes: [],
-    source: 'placeholder', file: null, onChange: null,
+    source: 'placeholder', file: null, onChange: null, mode: defaultMode ?? 'placeholder',
     pending: false, // true while admin mode publishes a new file here
-    isVideo: () => !!current?.video,
+    isVideo: () => shown === image && !!image?.video,
+    colour: colourName,
     // Image/video URL of what the slot shows, for the panel's thumbnail.
     thumbSrc() {
-      if (!current) return placeholderThumb();
-      return current.thumb?.() ?? (current.video ? current.video.src : current.tex.image.src);
+      if (!shown) return placeholderThumb();
+      if (shown.flat) return shown.canvas.toDataURL();
+      return shown.thumb?.() ?? (shown.video ? shown.video.src : shown.tex.image.src);
     },
     // Show a local file straight away (admin, while it publishes). Throws if the
     // browser cannot decode it.
@@ -226,7 +270,8 @@ function slotController(key, { apply, info, placeholderThumb, assets }) {
       const id = ++seq;
       const res = await loadBlob(file, file.name);
       if (id !== seq) return disposeRes(res);
-      show(res, 'shared');
+      opts = { ...opts, mode: 'image' };
+      setImage(res, 'shared');
     },
     // Record that the file now showing was published at `url` (no reload).
     published(url) { sharedUrl = url; },
@@ -236,15 +281,28 @@ function slotController(key, { apply, info, placeholderThumb, assets }) {
       if (slot.pending || url === sharedUrl) return;
       sharedUrl = url;
       const id = ++seq;
-      if (!entry) return show(assetRes, 'asset');
+      if (!entry) return setImage(assetRes, 'asset');
       try {
         const res = await loadEntry(entry);
         if (id !== seq) return disposeRes(res);
-        show(res, 'shared');
+        setImage(res, 'shared');
       } catch {
-        if (id === seq) show(assetRes, 'asset'); // file missing or unreadable
+        if (id === seq) setImage(assetRes, 'asset'); // file missing or unreadable
       }
     },
+    // Fill mode + colour from the build's shared options
+    setOptions(options = {}) {
+      const next = {
+        mode: FILL_MODES[options[`mode.${key}`]] ? options[`mode.${key}`] : null,
+        colour: options[`fill.${key}`] ?? null,
+        legacyFill: options[`fit.${key}`] === 'fill', // older "fill with colour" choice on an empty face
+      };
+      if (slot.pending || JSON.stringify(next) === JSON.stringify(opts)) return;
+      opts = next;
+      display();
+    },
+    // Re-show after the face changed shape (a flat colour follows the new aspect)
+    refresh() { shown = undefined; display(); },
   };
   slots[key] = slot;
   slotStatus[key] = 'placeholder';
@@ -252,18 +310,18 @@ function slotController(key, { apply, info, placeholderThumb, assets }) {
   // The /public/assets probe (slow for video) shows only if nothing is published.
   const ready = loadFirst(assets ?? A[key] ?? []).then((asset) => {
     assetRes = asset;
-    if (asset && sharedUrl === null && slot.source === 'placeholder') show(asset, 'asset');
+    if (asset && sharedUrl === null && slot.source === 'placeholder') setImage(asset, 'asset');
   });
 
-  return { slot, ready };
+  return { slot, ready, display };
 }
 
 // A slot whose artwork is applied by the caller (e.g. a whole die-cut arch face):
 // apply(res) gets the loaded file ({ tex, aspect, … }) or null for the default.
-export function customSlot(key, { apply, info, placeholderThumb, assets = [] }) {
-  const out = slotController(key, { apply, info, placeholderThumb, assets });
-  apply(null);
-  return out;
+export function customSlot(key, { apply, info, placeholderThumb, assets = [], defaultMode, defaultColour }) {
+  const out = slotController(key, { apply, info, placeholderThumb, assets, defaultMode, defaultColour });
+  out.display();
+  return { slot: out.slot, ready: out.ready };
 }
 
 // ─── Flat slot ──────────────────────────────────────────────────────────────
@@ -291,7 +349,7 @@ export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = t
   group.add(content);
 
   let phThumb = null;
-  const { slot, ready } = slotController(key, {
+  const { slot, ready, display } = slotController(key, {
     assets,
     info: { width: aw, height: ah, aspect: aw / ah },
     placeholderThumb: () => (phThumb ??= phTex.image.toDataURL()),
@@ -304,6 +362,7 @@ export function makeSlot(key, { w, h, bg, padding = 0, placeholder, emissive = t
     },
   });
   slot.meshes = [bgMesh, content];
+  display();
 
   return { group, ready, bgMat: bgMesh.material, contentMat };
 }
@@ -354,20 +413,34 @@ export function makeCutoutSlot(key, { width, maxHeight, thickness, border, board
   }
 
   const opts = { border: border / width, board: boardColor };
-  const { slot, ready } = slotController(key, {
+  const { slot, ready, display } = slotController(key, {
     assets,
     info: { width, height: maxHeight, aspect: width / maxHeight, spec: `≈ ${width} m wide · die-cut to the logo outline · image` },
     placeholderThumb: () => (phCut ??= dieCut(phCanvas, opts)).canvas.toDataURL(),
     apply(res) {
       if (!res) return build((phCut ??= dieCut(phCanvas, opts)));
-      const cut = dieCut(res.tex.image, opts);
+      const cut = dieCut(res.flat ? paddedFlat(res.flat, phCanvas.width / phCanvas.height) : res.tex.image, opts);
       res.thumb = () => (res.thumbUrl ??= cut.canvas.toDataURL());
       build(cut);
     },
   });
-  build((phCut ??= dieCut(phCanvas, opts)));
+  display();
 
   return { group, ready };
+}
+
+// A flat colour for a die-cut sign: a rounded panel on a transparent margin, so
+// the cut follows a panel (a fully opaque file would read as all background).
+function paddedFlat(hex, aspect) {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = Math.round(512 / aspect);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = hex;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, c.width - 16, c.height - 16, Math.min(c.width, c.height) * 0.12);
+  ctx.fill();
+  return c;
 }
 
 // A standalone die-cut board (no artwork slot): the outline of `source` plus a

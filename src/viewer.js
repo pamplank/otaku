@@ -201,11 +201,13 @@ export async function startViewer(build) {
   }
 
   // ─── Export render (1920×1080 PNG; installations: also 3840×2160, transparent) ───
-  const exportOpts = { width: R.width, height: R.height, transparent: false };
-  function renderPNG(viewName, { width = R.width, height = R.height, transparent = false } = {}) {
+  const exportOpts = { width: R.width, height: R.height, transparent: false, clean: false };
+  // clean: no caption card, labels or dimensions (for cropping into deck cards)
+  function renderPNG(viewName, { width = R.width, height = R.height, transparent = false, clean = false } = {}) {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     const pr = renderer.getPixelRatio();
-    built.exportBegin?.({ transparent, caption: state.caption, labels: state.labels });
+    const caption = state.caption && !clean;
+    built.exportBegin?.({ transparent, caption, clean, labels: state.labels && !clean });
     setRenderSize(width, height, 1);
     keepAboveFloor();
     draw({ exporting: true, transparent });
@@ -214,7 +216,7 @@ export async function startViewer(build) {
     out.height = height;
     const ctx = out.getContext('2d');
     ctx.drawImage(renderer.domElement, 0, 0);
-    if (state.caption) drawCaption(ctx, viewName, height / R.height);
+    if (caption) drawCaption(ctx, viewName, height / R.height);
     const url = out.toDataURL('image/png');
     built.exportEnd?.();
     setRenderSize(w, h, pr);
@@ -258,7 +260,7 @@ export async function startViewer(build) {
 
   const viewLabel = () => rig.presets[rig.current]?.label || 'Custom view';
   const fileName = (label, o = exportOpts) => `OPF27_${build.meta.fileTag}_${label.replace(/[^\w]+/g, '-')}_${state.night ? 'night' : 'day'}` +
-    `${o.transparent ? '_transparent' : ''}_${o.width}x${o.height}.png`;
+    `${o.clean ? '_clean' : ''}${o.transparent ? '_transparent' : ''}_${o.width}x${o.height}.png`;
 
   if (build.exportOptions) {
     // Resolution + transparent background (installations only)
@@ -269,13 +271,16 @@ export async function startViewer(build) {
     box.innerHTML = `
       <label class="check"><select id="exportRes" aria-label="Render size">
         <option value="1920x1080">1920 × 1080</option><option value="3840x2160">3840 × 2160 (4K)</option></select></label>
+      <label class="check"><select id="exportStyle" aria-label="Render style">
+        <option value="caption">With caption</option><option value="clean">Clean (no caption, labels or UI)</option></select></label>
       <label class="check"><input type="checkbox" id="transparentChk" /> Transparent background</label>`;
     actions.insertBefore(box, document.getElementById('adminBtn'));
     const small = document.querySelector('#exportBtn small');
     const sync = () => {
       const [ew, eh] = box.querySelector('#exportRes').value.split('x').map(Number);
-      Object.assign(exportOpts, { width: ew, height: eh, transparent: box.querySelector('#transparentChk').checked });
-      small.textContent = `${ew} × ${eh} PNG${exportOpts.transparent ? ' · transparent' : ''}`;
+      Object.assign(exportOpts, { width: ew, height: eh, transparent: box.querySelector('#transparentChk').checked,
+        clean: box.querySelector('#exportStyle').value === 'clean' });
+      small.textContent = `${ew} × ${eh} PNG${exportOpts.clean ? ' · clean' : ''}${exportOpts.transparent ? ' · transparent' : ''}`;
     };
     box.addEventListener('change', sync);
     sync();
@@ -315,7 +320,10 @@ export async function startViewer(build) {
   // A build's own slots follow its state; slots shown from other builds follow theirs.
   const ownKeys = build.artwork ? Object.keys(build.artwork) : Object.keys(slots).filter((k) => !(build.alsoShow ?? []).some((a) => a.keys.includes(k)));
   const applyKeys = (state, keys) => {
-    for (const key of keys) slots[key]?.setShared(state.slots?.[key] ?? null);
+    for (const key of keys) {
+      slots[key]?.setOptions(state.options);   // fill mode: placeholder / colour / image
+      slots[key]?.setShared(state.slots?.[key] ?? null);
+    }
   };
   const others = {};
   const applyOthers = async () => {
