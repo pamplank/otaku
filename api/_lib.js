@@ -18,7 +18,8 @@ import path from 'node:path';
 const BUCKET = 'stage';
 
 // One shared state per build. The main stage keeps its original file name.
-export const BUILDS = ['main', 'ballroom', 'panel', 'mini', 'arch', 'booth-a', 'booth-b', 'booth-c', 'zone'];
+export const BUILDS = ['main', 'ballroom', 'panel', 'mini', 'arch', 'booth-a', 'booth-b', 'booth-c', 'zone',
+  'cube-tower', 'date-letters', 'polaroid', 'gachapon'];
 const isPreview = () => process.env.VERCEL_ENV === 'preview';
 const stateFile = (build) => (build === 'main' ? 'state.json' : `state-${build}.json`);
 // Preview deployments save to their own files (and read production's until they
@@ -176,6 +177,22 @@ export function cleanSlot(entry) {
     name: String(entry.name ?? '').slice(0, 200),
     type: String(entry.type ?? '').slice(0, 100),
   };
+}
+
+// Build options (installations: fit modes, palette colours, short texts).
+// A patch maps keys like "fit.cubeFront1" or "text.date" to a short string, or
+// null to go back to the default. Returns the cleaned patch, or undefined if bad.
+const OPTION_KEY = /^[a-z][a-zA-Z0-9]{0,15}\.[a-zA-Z][a-zA-Z0-9]{0,31}$/;
+export function cleanOptions(patch) {
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return undefined;
+  const out = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (!OPTION_KEY.test(k)) return undefined;
+    if (v === null) out[k] = null;
+    else if (typeof v === 'string' && v.length <= 80) out[k] = v;
+    else return undefined;
+  }
+  return out;
 }
 
 export function cleanPose(p) {
