@@ -2,7 +2,8 @@
 // everyone sees them. Files can be picked, dropped on a row, or dropped (or
 // double-clicked) straight onto the slot in the 3D view.
 import * as THREE from 'three';
-import { slots } from './slots.js';
+import { slots, FILL_MODES } from './slots.js';
+import { palette as P } from '../stage.config.js';
 import { uploadFile, saveState } from './shared.js';
 
 // The main stage's slots; other builds pass their own list.
@@ -14,6 +15,7 @@ export const MAIN_ARTWORK = {
 };
 
 const m = (v) => +v.toFixed(2);
+const FILL_COLOURS = ['dark', 'yellow', 'pink', 'cyan', 'white'];
 // 5:3 rather than 1.67:1 when a small whole-number ratio fits.
 function ratio(a) {
   for (let d = 1; d <= 10; d++) {
@@ -58,7 +60,7 @@ export function buildArtworkPanel({ canvas, camera, getState, setState, info: IN
     row.status.textContent = 'Publishing…';
     try {
       const entry = await uploadFile(key, file);
-      const state = await saveState({ slots: { [key]: entry } });
+      const state = await saveState({ slots: { [key]: entry }, options: { [`mode.${key}`]: 'image' } });
       setState(state);
       slot.published(state.slots[key]?.url ?? null);
     } catch (e) {
@@ -78,10 +80,30 @@ export function buildArtworkPanel({ canvas, camera, getState, setState, info: IN
     row.error.hidden = true;
     row.el.classList.add('is-busy');
     try {
-      setState(await saveState({ slots: { [key]: null } }));
+      const state = await saveState({ slots: { [key]: null }, options: { [`mode.${key}`]: null } });
+      setState(state);
+      slots[key].setOptions(state.options);
       await slots[key].setShared(null);
     } catch (e) {
       fail(row, `Not reset: ${e.message}`);
+    } finally {
+      row.el.classList.remove('is-busy');
+    }
+  }
+
+
+  // Fill mode (placeholder / colour / image) and the colour, saved per face
+  async function setFill(key, patch) {
+    const row = rows[key];
+    row.error.hidden = true;
+    row.el.classList.add('is-busy');
+    try {
+      const state = await saveState({ options: patch });
+      setState(state);
+      slots[key].setOptions(state.options);
+    } catch (e) {
+      fail(row, `Not saved: ${e.message}`);
+      render(key);
     } finally {
       row.el.classList.remove('is-busy');
     }
@@ -109,6 +131,10 @@ export function buildArtworkPanel({ canvas, camera, getState, setState, info: IN
             <label class="art-upload">Upload<input type="file" accept="${info.accept}" hidden /></label>
             <button class="art-reset" type="button">Reset</button>
           </div>
+          <div class="art-fill">
+            <label class="opt-label">Show <select class="fill-mode">${Object.entries(FILL_MODES).map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
+            <span class="opt-swatches fill-swatches">${FILL_COLOURS.map((c) => `<button type="button" class="opt-swatch" data-c="${c}" title="${c}" style="--c:${P[c]}"></button>`).join('')}</span>
+          </div>
         </div>
       </div>`;
     list.append(el);
@@ -119,6 +145,13 @@ export function buildArtworkPanel({ canvas, camera, getState, setState, info: IN
       input.value = '';
     });
     el.querySelector('.art-reset').addEventListener('click', () => reset(key));
+    const modeSel = el.querySelector('.fill-mode');
+    modeSel.addEventListener('change', () => {
+      setFill(key, { [`mode.${key}`]: modeSel.value });
+      if (modeSel.value === 'image' && !slot.file) input.click(); // nothing to show yet: pick a file
+    });
+    el.querySelectorAll('.fill-swatches .opt-swatch').forEach((b) => b.addEventListener('click', () =>
+      setFill(key, { [`fill.${key}`]: b.dataset.c, [`mode.${key}`]: 'colour' })));
 
     el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('is-over'); });
     el.addEventListener('dragleave', () => el.classList.remove('is-over'));
@@ -136,6 +169,8 @@ export function buildArtworkPanel({ canvas, camera, getState, setState, info: IN
       error: el.querySelector('.art-error'),
       upload: el.querySelector('.art-upload'),
       resetBtn: el.querySelector('.art-reset'),
+      mode: modeSel,
+      swatches: el.querySelector('.fill-swatches'),
     };
     slot.onChange = () => render(key);
     render(key);
@@ -145,7 +180,12 @@ export function buildArtworkPanel({ canvas, camera, getState, setState, info: IN
     const slot = slots[key];
     const row = rows[key];
     const labels = { placeholder: 'Placeholder', asset: 'From assets folder', shared: 'Published' };
-    row.status.textContent = slot.file ? `${labels[slot.source]} · ${slot.file.split('/').pop()}` : labels.placeholder;
+    row.status.textContent = slot.mode === 'colour' ? 'Flat colour'
+      : slot.mode === 'placeholder' ? (slot.file ? `Placeholder (file kept · ${slot.file.split('/').pop()})` : labels.placeholder)
+      : slot.file ? `${labels[slot.source]} · ${slot.file.split('/').pop()}` : 'Image · no file yet (flat colour)';
+    row.mode.value = slot.mode;
+    row.swatches.hidden = slot.mode !== 'colour';
+    row.swatches.querySelectorAll('.opt-swatch').forEach((b) => b.classList.toggle('is-on', b.dataset.c === slot.colour()));
     row.el.dataset.source = slot.source;
     row.upload.firstChild.textContent = slot.source === 'shared' ? 'Replace' : 'Upload';
     row.resetBtn.hidden = slot.source !== 'shared';

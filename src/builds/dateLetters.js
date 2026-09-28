@@ -7,7 +7,7 @@ export default installationBuild({
   meta: {
     eyebrow: 'Otaku Pop Fes 2027 · Installations · Mall atrium',
     title: 'Date Letters',
-    sub: 'Selfie sculpture · 2027 numerals ≈ 2.3 m · all sizes TBC',
+    sub: 'Selfie sculpture · sticker numerals ≈ 2.1–2.4 m · all sizes TBC',
     ariaLabel: 'Rendered 3D model of the 2027 date letters selfie sculpture installation',
     caption: '2027 DATE LETTERS',
     fileTag: 'DateLetters',

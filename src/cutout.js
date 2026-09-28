@@ -164,7 +164,7 @@ function fillHoles(mask, w, h) {
 // Boundary loops along cell edges (grid-corner coordinates, y down).
 // Each directed edge keeps the filled cell on its left; at a corner shared by
 // two diagonal cells, turn left so loops stay simple.
-function traceLoops(mask, w, h) {
+export function traceLoops(mask, w, h) {
   const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && mask[y * w + x] === 1;
   const out = new Map(); // "x,y" -> [[x2, y2], ...]
   const add = (x1, y1, x2, y2) => {
@@ -217,7 +217,7 @@ function area(l) {
 }
 
 // Ramer–Douglas–Peucker on a closed loop.
-function simplify(pts, tol) {
+export function simplify(pts, tol) {
   const rdp = (a, b) => {
     const [x1, y1] = pts[a], [x2, y2] = pts[b % pts.length];
     const len = Math.hypot(x2 - x1, y2 - y1) || 1;
@@ -234,7 +234,7 @@ function simplify(pts, tol) {
 }
 
 // Two rounds of Chaikin corner cutting: rounds the staircase into a cut line.
-function smooth(pts, rounds = 2) {
+export function smooth(pts, rounds = 2) {
   for (let r = 0; r < rounds; r++) {
     const next = [];
     for (let i = 0; i < pts.length; i++) {

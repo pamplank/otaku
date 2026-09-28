@@ -16,7 +16,7 @@ export function installationBuild(def) {
     meta: def.meta,
     presets: def.presets,
     exportOptions: true,
-    toggles: [{ key: 'ceiling', label: 'Ceiling', on: true }, ...(def.toggles ?? [])],
+    toggles: [{ key: 'dims', label: 'Dimensions', on: true }, { key: 'ceiling', label: 'Ceiling', on: true }, ...(def.toggles ?? [])],
     get artwork() { return art.artwork(); },
     create(ctx) {
       const s = def.create({ art, ...ctx });
@@ -27,7 +27,7 @@ export function installationBuild(def) {
         overlay: dims, key: s.key, context: s.setting.group, shadowCatcher: s.shadowCatcher ?? 20, exposure: s.exposure,
         glows: [...(s.setting.glows ?? []), ...(s.glows ?? [])], nightLights: s.nightLights,
       });
-      let labelsOn = true;
+      let dimsOn = true;
       return {
         groups: [s.install, s.setting.group],
         decalRoots: [],
@@ -37,14 +37,15 @@ export function installationBuild(def) {
         slotsReady: [...art.ready(), r.ready],
         draw: r.draw,
         setSize: r.setSize,
-        // Labels (dimension cards) show on an export only with "Caption on render"
-        exportBegin(o) { r.exportBegin(o); labelsOn = dims.visible; dims.visible = o.labels && o.caption; },
-        exportEnd() { r.exportEnd(); dims.visible = labelsOn; },
+        // Dimension cards (their own "Dimensions" layer) show on an export only
+        // with the caption; a clean export has neither
+        exportBegin(o) { r.exportBegin(o); dimsOn = dims.visible; dims.visible = dimsOn && o.caption && !o.clean; },
+        exportEnd() { r.exportEnd(); dims.visible = dimsOn; },
         applyState: art.applyState,
         setupAdmin: art.setupAdmin,
         visibility(state, { plan }) {
           if (s.setting.ceiling) s.setting.ceiling.visible = state.ceiling && !plan;
-          dims.visible = state.labels;
+          dims.visible = state.dims;
           s.visibility?.(state, { plan });
         },
       };
