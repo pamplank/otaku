@@ -55,7 +55,8 @@ export async function startViewer(build) {
   } catch { /* fall back to system fonts */ }
 
   const canvas = document.getElementById('scene');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  // Builds with export options (installations) need an alpha canvas for transparent renders
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, ...(build.exportOptions ? { alpha: true } : {}) });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -63,12 +64,13 @@ export async function startViewer(build) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 0.3, 700);
 
-  const built = build.create();
+  const built = build.create({ renderer, scene, camera });
   const { labels } = built;
   const people = built.people ?? new THREE.Group();
   scene.add(...built.groups, people, labels.group);
 
-  const lighting = buildLighting(scene, built.lighting);
+  // A build can bring its own lighting (installations: PBR, HDRI); otherwise the toon rig
+  const lighting = built.lighting?.custom ? built.lighting : buildLighting(scene, built.lighting);
 
   const labelRenderer = new CSS2DRenderer({ element: document.getElementById('labels') });
 
@@ -155,6 +157,15 @@ export async function startViewer(build) {
 
   // ─── Sizing ───
   function setRenderSize(w, h, pr) {
+    if (built.setSize) {                  // the build renders with its own pipeline
+      renderer.setPixelRatio(pr);
+      renderer.setSize(w, h, false);
+      built.setSize(w, h, pr);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      updateLineResolution(w * pr, h * pr);
+      return;
+    }
     renderer.setPixelRatio(pr);
     renderer.setSize(w, h, false);
     composer.setPixelRatio(pr);
@@ -183,32 +194,38 @@ export async function startViewer(build) {
     }
   }
 
-  function draw() {
+  function draw(opts = {}) {
+    if (built.draw) return built.draw({ night: state.night, ...opts });
     if (state.night) composer.render();
     else renderer.render(scene, camera);
   }
 
-  // ─── Export render (1920×1080 PNG) ───
-  function renderPNG(viewName) {
+  // ─── Export render (1920×1080 PNG; installations: also 3840×2160, transparent) ───
+  const exportOpts = { width: R.width, height: R.height, transparent: false };
+  function renderPNG(viewName, { width = R.width, height = R.height, transparent = false } = {}) {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     const pr = renderer.getPixelRatio();
-    setRenderSize(R.width, R.height, 1);
+    built.exportBegin?.({ transparent, caption: state.caption, labels: state.labels });
+    setRenderSize(width, height, 1);
     keepAboveFloor();
-    draw();
+    draw({ exporting: true, transparent });
     const out = document.createElement('canvas');
-    out.width = R.width;
-    out.height = R.height;
+    out.width = width;
+    out.height = height;
     const ctx = out.getContext('2d');
     ctx.drawImage(renderer.domElement, 0, 0);
-    if (state.caption) drawCaption(ctx, viewName);
+    if (state.caption) drawCaption(ctx, viewName, height / R.height);
     const url = out.toDataURL('image/png');
+    built.exportEnd?.();
     setRenderSize(w, h, pr);
     draw();
     return url;
   }
 
   // Caption card in the deck's style: rounded white card, dark outline, hard dark shadow.
-  function drawCaption(ctx, viewName) {
+  function drawCaption(ctx, viewName, k = 1) {
+    ctx.save();
+    ctx.scale(k, k);             // authored for 1080 px tall
     const text = `OTAKU POP FES 2027 · ${build.meta.caption} · ${viewName.toUpperCase()}`;
     const sub = 'Concept only · all sizes TBC pending site survey' +
       (Object.values(slotStatus).includes('placeholder') ? ' · placeholder artwork' : '');
@@ -236,15 +253,38 @@ export async function startViewer(build) {
     ctx.fillText(text, x + 26, y + 40);
     body();
     ctx.fillText(sub, x + 26, y + 68);
+    ctx.restore();
   }
 
   const viewLabel = () => rig.presets[rig.current]?.label || 'Custom view';
-  const fileName = (label) => `OPF27_${build.meta.fileTag}_${label.replace(/[^\w]+/g, '-')}_${state.night ? 'night' : 'day'}_1920x1080.png`;
+  const fileName = (label, o = exportOpts) => `OPF27_${build.meta.fileTag}_${label.replace(/[^\w]+/g, '-')}_${state.night ? 'night' : 'day'}` +
+    `${o.transparent ? '_transparent' : ''}_${o.width}x${o.height}.png`;
+
+  if (build.exportOptions) {
+    // Resolution + transparent background (installations only)
+    const actions = document.querySelector('.actions');
+    const box = document.createElement('div');
+    box.className = 'export-opts';
+    document.body.classList.add('has-export-opts');
+    box.innerHTML = `
+      <label class="check"><select id="exportRes" aria-label="Render size">
+        <option value="1920x1080">1920 × 1080</option><option value="3840x2160">3840 × 2160 (4K)</option></select></label>
+      <label class="check"><input type="checkbox" id="transparentChk" /> Transparent background</label>`;
+    actions.insertBefore(box, document.getElementById('adminBtn'));
+    const small = document.querySelector('#exportBtn small');
+    const sync = () => {
+      const [ew, eh] = box.querySelector('#exportRes').value.split('x').map(Number);
+      Object.assign(exportOpts, { width: ew, height: eh, transparent: box.querySelector('#transparentChk').checked });
+      small.textContent = `${ew} × ${eh} PNG${exportOpts.transparent ? ' · transparent' : ''}`;
+    };
+    box.addEventListener('change', sync);
+    sync();
+  }
 
   document.getElementById('exportBtn').addEventListener('click', () => {
     const label = viewLabel();
     const a = document.createElement('a');
-    a.href = renderPNG(label);
+    a.href = renderPNG(label, exportOpts);
     a.download = fileName(label);
     a.click();
   });
@@ -294,6 +334,7 @@ export async function startViewer(build) {
     if (!state) return;
     shared = state;
     applyKeys(state, ownKeys);
+    built.applyState?.(state);           // build options (installations: fit, colours, texts)
     if (built.logoSign && !logoMove?.isBusy()) {
       built.logoSign.pose = state.logoPose ?? null;
       built.logoSign.apply();
@@ -308,6 +349,7 @@ export async function startViewer(build) {
     if (status.admin && build.artwork) {
       document.getElementById('artBtn').hidden = false;
       const artPanel = buildArtworkPanel({ canvas, camera, getState: () => shared, setState: setShared, info: build.artwork });
+      built.setupAdmin?.({ panel: artPanel, getState: () => shared, setState: (st) => { setShared(st); built.applyState?.(st); } });
       if (built.logoSign) {
         logoMove = setupLogoMove({ canvas, camera, controls, sign: built.logoSign, row: artPanel.rows[built.logoSign.key ?? 'logo'].el, setState: setShared });
       }
@@ -324,12 +366,12 @@ export async function startViewer(build) {
   // Hook for batch renders (used to produce the deck PNGs)
   window.__opf = {
     build: build.id, goPreset, setToggle, state, slotStatus, crowd: people.userData.crowdCount, camera, controls, composer, renderer, scene, bloom,
-    renderPNG: (name, night = false) => {
+    renderPNG: (name, night = false, opts) => {
       setToggle('night', night);
       goPreset(name, true);
       lighting.update(night ? 2.0 : 0);
       controls.update();
-      return renderPNG(rig.presets[name].label);
+      return renderPNG(rig.presets[name].label, opts);
     },
     fileName,
   };

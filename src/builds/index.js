@@ -10,6 +10,10 @@ export const BUILDS = [
   { id: 'booth-b', group: 'Booths', name: 'Plan B', where: 'Exhibition + photo', path: '/booths/b', load: () => import('./boothB.js') },
   { id: 'booth-c', group: 'Booths', name: 'Plan C', where: 'Photo spot', path: '/booths/c', load: () => import('./boothC.js') },
   { id: 'zone', group: 'Booths', name: 'IP Booth Zone', where: 'Crystal Pavilion', path: '/booths/zone', load: () => import('./zone.js') },
+  { id: 'cube-tower', group: 'Installations', name: 'Cube Tower', where: 'Okada Manila entrance', path: '/installations/cube-tower', load: () => import('./cubeTower.js') },
+  { id: 'date-letters', group: 'Installations', name: 'Date Letters', where: 'Mall atrium', path: '/installations/date-letters', load: () => import('./dateLetters.js') },
+  { id: 'polaroid', group: 'Installations', name: 'Polaroid Frame', where: 'Mall walkway', path: '/installations/polaroid', load: () => import('./polaroid.js') },
+  { id: 'gachapon', group: 'Installations', name: 'Gachapon', where: 'Mall concourse / Okada', path: '/installations/gachapon', load: () => import('./gachapon.js') },
 ];
 
 // "/" and "/main" open the main stage; unknown paths fall back to it too.

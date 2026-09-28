@@ -1,7 +1,8 @@
 // GET  /api/state → shared artwork + logo pose (everyone)
 // PUT  /api/state → merge a change into it (admin only)
-//      body: { slots?: { led?: {path,name,type} | null, … }, logoPose?: {x,y,z,scale} | null }
-import { json, getStore, isAdmin, EMPTY_STATE, validSlot, cleanSlot, cleanPose, withUrls, buildOf } from './_lib.js';
+//      body: { slots?: { led?: {path,name,type} | null, … }, logoPose?: {x,y,z,scale} | null,
+//              options?: { 'fit.slotKey': 'cover' | null, … } }
+import { json, getStore, isAdmin, EMPTY_STATE, validSlot, cleanSlot, cleanPose, cleanOptions, withUrls, buildOf } from './_lib.js';
 
 export async function GET(request) {
   const build = buildOf(request);
@@ -37,6 +38,17 @@ export async function PUT(request) {
       const pose = cleanPose(patch.logoPose);
       if (pose === undefined) return json({ error: 'Bad logo pose' }, 400);
       state.logoPose = pose;
+    }
+    if ('options' in patch) {
+      const opts = cleanOptions(patch.options);
+      if (opts === undefined) return json({ error: 'Bad options' }, 400);
+      const merged = { ...(state.options ?? {}) };
+      for (const [k, v] of Object.entries(opts)) {
+        if (v === null) delete merged[k];
+        else merged[k] = v;
+      }
+      if (Object.keys(merged).length > 300) return json({ error: 'Too many options' }, 400);
+      state.options = merged;
     }
     state.updatedAt = new Date().toISOString();
     await store.writeState(state, build);

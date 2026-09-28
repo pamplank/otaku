@@ -1,4 +1,4 @@
-// Build switcher across the top: STAGES and BOOTHS groups, one link per build.
+// Build switcher across the top: STAGES, BOOTHS and INSTALLATIONS groups, one link per build.
 import { BUILDS } from './builds/index.js';
 
 export function renderSwitcher(current) {
