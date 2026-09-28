@@ -1,5 +1,6 @@
 // Positions derived from stage.config.js. Edit the config, not this file.
 import { stage as S, site as X } from '../stage.config.js';
+import { pavilion as ZONE_RING } from '../config/zone.config.js';   // read-only reference for the concave hall (see V)
 
 const D = S.deck;
 const T = S.truss;
@@ -72,4 +73,66 @@ export const L = {
   pocketArea: polyArea(pocketPoly),
   aisleInnerZ: (x) => hallFrontZ(x) - X.aisle.width,
   polyArea,
+};
+
+// ─── Concave hall geometry (main stage view only) ───────────────────────────
+// The hall section wraps around the Fountain like the IP BOOTH ZONE ring. The
+// ring is an ellipse (config/zone.config.js → pavilion, read here as a reference
+// only); at the stage — the top of the ellipse — it is matched by its osculating
+// circle, radius semiX² / semiZ, so every curved edge below is an arc of that
+// circle's centre C and every side edge is radial (points at C). The zone view
+// itself does not use any of this.
+
+const ringMidZ = hallFrontZ(cx) - ZONE_RING.width / 2;           // zone centreline at the stage (as in zone.js)
+const Rc = ZONE_RING.semiX ** 2 / ZONE_RING.semiZ;               // radius of curvature at the top of the ellipse
+const C = { x: cx, z: ringMidZ + Rc };                           // centre of the arcs, on the Fountain side
+const polar = (t, r) => [C.x + r * Math.sin(t), C.z - r * Math.cos(t)];   // t: radians from the stage axis, + = right
+const angleOf = (x, z) => Math.atan2(x - C.x, C.z - z);
+const radiusOf = (x, z) => Math.hypot(x - C.x, C.z - z);
+// Arc of radius r from angle t0 to t1
+const arcR = (r, t0, t1, n = 48) => Array.from({ length: n + 1 }, (_, i) => polar(t0 + ((t1 - t0) * i) / n, r));
+// Band between radii r0 < r1 and angles t0 < t1 (radial sides)
+const band = (r0, r1, t0, t1, n = 48) => [...arcR(r1, t0, t1, n), ...arcR(r0, t1, t0, n)];
+
+const Ri = C.z - hallFrontZ(cx);                                 // inner arc: hall edge on the Fountain side
+const Rb = C.z - H.backZ;                                        // outer arc: behind the stage
+const Ra = Ri + X.aisle.width;                                   // visitor aisle, stage-side edge
+const alpha = Math.asin(H.frontHalfWidth / Ri);                  // section side edges (radial)
+const beta = alpha + H.boothAreaWidth / ((Ri + Rb) / 2);         // outer edge of the booth areas
+const strip = X.flooringStrips.width / ((Ra + Rb) / 2);          // 250 kg/m² strip, angular width
+
+// Viewing pocket: straight back edge behind the pit, radial sides, front on an arc
+// concentric with the hall; its front radius is solved so the area is the spec's.
+const pocketHalf = Math.atan(PK.backHalfWidth / (C.z - PK.backZ));
+function pocketFor(rFront) {
+  const bx = (C.z - PK.backZ) * Math.tan(pocketHalf);
+  return [[C.x - bx, PK.backZ], [C.x + bx, PK.backZ], ...arcR(rFront, pocketHalf, -pocketHalf, 40)];
+}
+let lo = C.z - PK.backZ - 30, hi = C.z - PK.backZ - 1;           // bisection on the front radius
+for (let i = 0; i < 60; i++) {
+  const mid = (lo + hi) / 2;
+  if (polyArea(pocketFor(mid)) > PK.statedArea) lo = mid; else hi = mid;
+}
+const Rp = (lo + hi) / 2;
+const concavePocket = pocketFor(Rp);
+
+// FOH front-right inside the pocket; AC towers on the pocket's two front corners
+const FOH = X.foh;
+const fohR = Rp + FOH.depth / 2 + 0.7;
+const fohT = pocketHalf - (FOH.width / 2 + 1.9) / fohR;
+const [fohX, fohZ] = polar(fohT, fohR);
+const acTowers = [-1, 1].map((s) => { const [x, z] = polar(s * (pocketHalf - 0.4 / Rp), Rp + 0.45); return { x, z }; });
+
+export const V = {
+  C, Rc, Ri, Rb, Ra, alpha, beta, strip,
+  polar, angleOf, radiusOf, arcR, band,
+  frontZ: (x) => C.z - Math.sqrt(Ri ** 2 - (x - C.x) ** 2),     // inner arc z at x
+  aisleZ: (x) => C.z - Math.sqrt(Ra ** 2 - (x - C.x) ** 2),      // aisle's stage-side edge z at x
+  sectionPoly: band(Ri, Rb, -alpha, alpha, 64),
+  pocketPoly: concavePocket,
+  pocketArea: polyArea(concavePocket),
+  pocketFrontR: Rp,
+  pocketHalf,
+  foh: { ...FOH, x: fohX, z: fohZ, rot: -fohT },
+  acTowers,
 };

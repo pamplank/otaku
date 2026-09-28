@@ -33,7 +33,8 @@ function inPoly(x, z, poly) {
   return inside;
 }
 
-export function buildPeople() {
+// Options (the main stage passes its concave pocket; defaults keep other views as they were)
+export function buildPeople({ pocket = L.pocketPoly, pocketArea = L.pocketArea, foh = X.foh, acTowers = X.acTowers } = {}) {
   const g = new THREE.Group();
   g.name = 'people';
   const geo = figureGeometry();
@@ -51,7 +52,7 @@ export function buildPeople() {
   }
 
   // FOH operators
-  const F = X.foh;
+  const F = foh;
   for (const dx of [-0.6, 0.6]) {
     const m = new THREE.Mesh(geo, toon('#4b4850'));
     m.castShadow = true;
@@ -63,8 +64,8 @@ export function buildPeople() {
 
   // Sample crowd (instanced), scattered inside the viewing pocket
   const rand = mulberry32(PPL.seed);
-  const target = Math.round(L.pocketArea * PPL.crowdDensity);
-  const xs = L.pocketPoly.map((p) => p[0]), zs = L.pocketPoly.map((p) => p[1]);
+  const target = Math.round(pocketArea * PPL.crowdDensity);
+  const xs = pocket.map((p) => p[0]), zs = pocket.map((p) => p[1]);
   const [x0, x1, z0, z1] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)];
   const minGap = 0.55;
   const cell = new Map();
@@ -83,8 +84,8 @@ export function buildPeople() {
   const blocked = (x, z) => {
     if (Math.abs(x - F.x) < F.width / 2 + 0.7 && Math.abs(z - F.z) < F.depth / 2 + 0.7) return true;
     if ((x - ex) ** 2 + (z - ez) ** 2 < 1.1 ** 2 || (Math.abs(x - ex) < 0.9 && z < ez && z > ez - 2.2)) return true;
-    for (const t of X.acTowers) if ((x - t.x) ** 2 + (z - t.z) ** 2 < 1.4 ** 2) return true;
-    return !inPoly(x, z, L.pocketPoly) || z < X.pocket.backZ + 0.4;
+    for (const t of acTowers) if ((x - t.x) ** 2 + (z - t.z) ** 2 < 1.4 ** 2) return true;
+    return !inPoly(x, z, pocket) || z < X.pocket.backZ + 0.4;
   };
   const spots = [];
   for (let tries = 0; spots.length < target && tries < target * 60; tries++) {
